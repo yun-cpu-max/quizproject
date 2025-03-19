@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지사항 - 맞추기 사이트</title>
+    <link rel="stylesheet" href="/style.css"> <!-- 외부 CSS 파일 링크 -->
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">← 돌아가기</button>
+        <div class="logo-container">
+            <img src="image.png" alt="로고" class="logo">
+        </div>
+    </div>
+
+    <div class="notice-container">
+        <h1 class="notice-title">공지사항</h1>
+        
+        <div class="notice-list">
+            <div class="notice-item">
+                <div class="notice-item-header">
+                    <div>
+                        <span class="notice-badge">공지</span>
+                        <span class="notice-item-title">서비스 이용 안내</span>
+                    </div>
+                    <span class="notice-item-date">2024-03-10</span>
+                </div>
+                <div class="notice-item-content">
+                    안녕하세요. 맞추기 사이트를 이용해 주셔서 감사합니다.<br>
+                    서비스 이용에 관한 안내사항을 알려드립니다.
+                </div>
+            </div>
+
+            <div class="notice-item">
+                <div class="notice-item-header">
+                    <div>
+                        <span class="notice-badge">공지</span>
+                        <span class="notice-item-title">개인정보 처리방침 개정 안내</span>
+                    </div>
+                    <span class="notice-item-date">2024-03-09</span>
+                </div>
+                <div class="notice-item-content">
+                    개인정보 처리방침이 개정되어 알려드립니다.<br>
+                    자세한 내용은 개인정보 처리방침을 확인해 주시기 바랍니다.
+                </div>
+            </div>
+
+            <div class="notice-item">
+                <div class="notice-item-header">
+                    <div>
+                        <span class="notice-badge">공지</span>
+                        <span class="notice-item-title">시스템 점검 안내</span>
+                    </div>
+                    <span class="notice-item-date">2024-03-08</span>
+                </div>
+                <div class="notice-item-content">
+                    시스템 점검으로 인해 일시적으로 서비스 이용이 제한될 수 있습니다.<br>
+                    불편을 드려 죄송합니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html> 

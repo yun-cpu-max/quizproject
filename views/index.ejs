@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 퀴즈</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-buttons">
+            <a href="/notice" class="nav-btn">공지사항</a>
+            <a href="/login" class="nav-btn">로그인</a>
+        </div>
+        <div class="logo-container">
+            <img src="/logo.png" alt="로고" class="logo">
+        </div>
+    </div>
+
+    <form action="/search" method="POST" class="search-container">
+        <div class="search-box">
+            <button class="filter-btn">▼</button>
+            <input type="text" name="search" class="search-input" placeholder="검색어를 입력하세요.">
+            <button type="submit" class="search-btn">검색</button>
+        </div>
+    </form>
+
+    <div class="image-grid">
+        <% images.forEach(img => { %>
+            <div class="image-card">
+                <img src="<%= img.src %>" alt="<%= img.title %>">
+                <div class="image-info">
+                    <h3><%= img.title %></h3>
+                    <p><%= img.description %></p>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</body>
+</html>
