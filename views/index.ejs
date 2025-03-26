@@ -28,7 +28,9 @@
     <div class="image-grid">
         <% images.forEach(img => { %>
             <div class="image-card">
-                <img src="<%= img.src %>" alt="<%= img.title %>">
+                <div class="image-container">
+                    <img src="<%= img.src %>" alt="<%= img.title %>">
+                </div>
                 <div class="image-info">
                     <h3><%= img.title %></h3>
                     <p><%= img.description %></p>

@@ -11,9 +11,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // 샘플 데이터 (Machugi.io처럼 이미지 목록을 표시)
 const images = [
-  { title: "이미지 제목1", description: "이미지 설명1", src: "https://via.placeholder.com/250x200" },
-  { title: "이미지 제목2", description: "이미지 설명2", src: "https://via.placeholder.com/250x200" },
-  { title: "이미지 제목3", description: "이미지 설명3", src: "https://via.placeholder.com/250x200" },
+  { title: "이미지 제목1", description: "이미지 설명1", src: "rogo.png" },
+  { title: "이미지 제목2", description: "이미지 설명2", src: "rogo.png" },
+  { title: "이미지 제목3", description: "이미지 설명3", src: "rogo.png" },
 ];
 
 // 메인 페이지 라우트
