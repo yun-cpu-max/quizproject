@@ -11,9 +11,27 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // 샘플 데이터 (Machugi.io처럼 이미지 목록을 표시)
 const images = [
-  { title: "이미지 제목1", description: "이미지 설명1", src: "rogo.png" },
-  { title: "이미지 제목2", description: "이미지 설명2", src: "rogo.png" },
-  { title: "이미지 제목3", description: "이미지 설명3", src: "rogo.png" },
+  { 
+    id: 1,
+    title: "이미지 제목1", 
+    description: "이미지 설명1", 
+    src: "/images/rogo.png",  // 절대 경로로 수정
+    questions: "퀴즈 설명입니다."
+  },
+  { 
+    id: 2,
+    title: "이미지 제목2", 
+    description: "이미지 설명2", 
+    src: "/images/rogo.png",
+    questions: "퀴즈 설명입니다."
+  },
+  { 
+    id: 3,
+    title: "이미지 제목3", 
+    description: "이미지 설명3", 
+    src: "/images/rogo.png",
+    questions: "퀴즈 설명입니다."
+  }
 ];
 
 // 메인 페이지 라우트
@@ -21,11 +39,12 @@ app.get("/", (req, res) => {
   res.render("index", { images });
 });
 
-// 검색 기능 (사용자가 검색어 입력하면 필터링)
+// 검색 기능 수정
 app.post("/search", (req, res) => {
   const searchTerm = req.body.search.toLowerCase();
   const filteredImages = images.filter(img =>
-    img.title.toLowerCase().includes(searchTerm) || img.description.toLowerCase().includes(searchTerm)
+    img.title.toLowerCase().includes(searchTerm) || 
+    img.description.toLowerCase().includes(searchTerm)
   );
   res.render("index", { images: filteredImages });
 });
@@ -43,6 +62,18 @@ app.get('/signup', (req, res) => {
 // 공지사항 페이지 렌더링
 app.get('/notice', (req, res) => {
     res.render('notice'); // notice.ejs 파일을 렌더링
+});
+
+// 퀴즈 상세 페이지 라우트 추가
+app.get("/quiz/:id", (req, res) => {
+  const quizId = parseInt(req.params.id);
+  const quiz = images.find(q => q.id === quizId);
+  
+  if (!quiz) {
+    return res.render('404', { message: "퀴즈를 찾을 수 없습니다" });
+  }
+  
+  res.render("quiz", { quiz, user: req.session.user });
 });
 
 // 서버 실행
