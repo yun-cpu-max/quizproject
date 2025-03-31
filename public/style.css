@@ -37,13 +37,7 @@ body {
 }
 
 .nav-btn {
-    padding: 10px 20px;
-    background: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
     text-decoration: none;
-    color: #333;
 }
 
 /* 검색 영역 스타일 */
@@ -56,32 +50,14 @@ body {
 .search-box {
     display: flex;
     align-items: center;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px;
+    gap: 10px;
     background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
 }
 
 .search-input {
-    border: none;
-    padding: 10px;
     width: 300px;
-    outline: none;
-}
-
-/* 검색 버튼 및 필터 버튼 스타일 */
-.search-btn, .filter-btn {
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 5px;
-    margin-left: 5px;
-}
-
-.search-btn:hover, .filter-btn:hover {
-    background-color: #0056b3;
 }
 
 /* 이미지 그리드 레이아웃 */
@@ -96,9 +72,25 @@ body {
 
 /* 이미지 카드 스타일 */
 .image-card {
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.image-card:hover {
+    transform: translateY(-5px);
+}
+
+/* 이미지 컨테이너 스타일 */
+.image-container {
+    width: 100%;
+    max-width: 250px;
+    margin: 0 auto;
+}
+
+.image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
 }
 
 /* 공지사항 페이지 스타일 */
@@ -183,20 +175,7 @@ body {
     position: absolute;
     top: 20px;
     left: 20px;
-    padding: 10px 20px;
-    background-color: #ffffff;
-    color: #333;
-    border: 2px solid #8c3bff;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
     text-decoration: none;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.back-btn:hover {
-    background-color: #8c3bff;
-    color: #ffffff;
 }
 
 /* 회원가입 페이지 스타일 */
@@ -263,38 +242,5 @@ body {
 
 /* 회원가입 버튼 스타일 */
 .signup-btn {
-    background: #8c3bff;
-    color: white;
-    padding: 15px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
     margin-top: 10px;
-}
-
-.signup-btn:hover {
-    background: #7a2fe6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(140, 59, 255, 0.2);
-}
-
-.signup-btn:active {
-    transform: translateY(0);
-}
-
-/* 이미지 컨테이너 스타일 */
-.image-container {
-    width: 100%;
-    max-width: 250px;
-    margin: 0 auto;
-}
-
-.image-container img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;  /* 이미지 비율 유지 */
-    display: block;
 }
