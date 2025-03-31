@@ -1,6 +1,5 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const session = require("express-session");
 
 const app = express();
 const PORT = 3000;
@@ -9,18 +8,6 @@ const PORT = 3000;
 app.set("view engine", "ejs");
 app.use(express.static("public")); // CSS, 이미지 파일 사용 가능
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// 세션 설정
-app.use(session({
-    secret: 'my-secret-key',
-    resave: false,
-    saveUninitialized: true
-}));
-
-// 임시 사용자 데이터
-const users = [
-    { username: 'test', password: 'test123' }
-];
 
 // 샘플 데이터 (Machugi.io처럼 이미지 목록을 표시)
 const images = [
@@ -49,7 +36,7 @@ const images = [
 
 // 메인 페이지 라우트
 app.get("/", (req, res) => {
-  res.render("index", { images, user: req.session.user });
+  res.render("index", { images });
 });
 
 // 검색 기능 수정
@@ -64,44 +51,17 @@ app.post("/search", (req, res) => {
 
 // 로그인 페이지 렌더링
 app.get('/login', (req, res) => {
-    res.render('login', { user: req.session.user });
-});
-
-// 로그인 처리
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    console.log('로그인 시도:', { username, password }); // 디버깅용 로그
-    
-    const user = users.find(u => u.username === username && u.password === password);
-    console.log('찾은 사용자:', user); // 디버깅용 로그
-    
-    if (user) {
-        req.session.user = user;
-        console.log('로그인 성공:', user); // 디버깅용 로그
-        res.redirect('/');
-    } else {
-        console.log('로그인 실패'); // 디버깅용 로그
-        res.render('login', { 
-            error: '아이디 또는 비밀번호가 잘못되었습니다.',
-            user: req.session.user 
-        });
-    }
-});
-
-// 로그아웃 처리
-app.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/');
+    res.render('login'); // login.ejs 파일을 렌더링
 });
 
 // 회원가입 페이지 렌더링
 app.get('/signup', (req, res) => {
-    res.render('signup', { user: req.session.user });
+    res.render('signup'); // signup.ejs 파일을 렌더링
 });
 
 // 공지사항 페이지 렌더링
 app.get('/notice', (req, res) => {
-    res.render('notice', { user: req.session.user });
+    res.render('notice'); // notice.ejs 파일을 렌더링
 });
 
 // 퀴즈 상세 페이지 라우트 추가
