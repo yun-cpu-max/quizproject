@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="signup-page">
+    <button onclick="goBack()" class="back-btn">← 돌아가기</button>
     <div class="signup-container">
         <h2>회원가입</h2>
         <form action="/signup" method="POST" class="signup-form">
@@ -28,5 +29,10 @@
             <button type="submit" class="signup-btn">회원가입</button>
         </form>
     </div>
+    <script>
+        function goBack() {
+            window.history.back(); // 이전 페이지로 이동
+        }
+    </script>
 </body>
 </html> 
