@@ -17,114 +17,147 @@
 }
 
 body {
-    background-color: #673ab7;
-    margin: 0;
-    padding: 20px;
     font-family: 'Noto Sans KR', sans-serif;
+    background: linear-gradient(135deg, var(--primary-color), #6a4bcc);
     min-height: 100vh;
     color: var(--text-color);
 }
 
 /* 네비게이션 바 스타일 */
 .navbar {
-    background-color: transparent !important;
-    padding: 10px 0;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+    padding: 1rem 0;
 }
 
-.logo {
-    width: 50px;
+.navbar-brand .logo {
+    width: 45px;
     height: auto;
+    margin-right: 15px;
+    transition: var(--transition);
 }
 
-/* 검색 컨테이너 스타일 */
+.navbar-brand .logo:hover {
+    transform: scale(1.05);
+}
+
+.navbar-nav .nav-link {
+    color: var(--white) !important;
+    padding: 0.5rem 1rem;
+    transition: var(--transition);
+    position: relative;
+    font-weight: 500;
+}
+
+.navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--white);
+    transition: var(--transition);
+    transform: translateX(-50%);
+}
+
+.navbar-nav .nav-link:hover::after {
+    width: 100%;
+}
+
+/* 검색 영역 스타일 */
 .search-container {
-    max-width: 600px;
-    margin: 20px auto;
-    padding: 10px;
+    display: flex;
+    justify-content: center;
+    margin: 2rem auto;
+    padding: 0 1rem;
 }
 
 .search-box {
     display: flex;
+    align-items: center;
     gap: 10px;
     background: rgba(255, 255, 255, 0.1);
-    padding: 10px;
-    border-radius: 5px;
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 600px;
 }
 
 .search-input {
-    flex: 1;
+    background: rgba(255, 255, 255, 0.9);
     border: none;
-    padding: 8px;
-    border-radius: 4px;
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: var(--transition);
 }
 
-.search-btn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 4px;
+.search-input:focus {
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(140, 59, 255, 0.2);
 }
 
-/* 이미지 그리드 컨테이너 */
-.images-container {
+/* 이미지 그리드 레이아웃 */
+.image-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    max-width: 1200px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
 }
 
 /* 이미지 카드 스타일 */
 .image-card {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.3s ease;
+    background: var(--white);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: none;
 }
 
 .image-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-10px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
 
-.image-card a {
-    text-decoration: none;
-    color: inherit;
-}
-
-.image-card img {
-    width: 200px;
+.image-container {
+    width: 100%;
     height: 200px;
-    object-fit: contain;
-    margin-bottom: 15px;
+    overflow: hidden;
 }
 
-.image-card h3 {
-    margin: 10px 0;
-    color: #333;
-    font-size: 1.2em;
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--transition);
 }
 
-.image-card p {
+.image-card:hover .image-container img {
+    transform: scale(1.05);
+}
+
+.image-info {
+    padding: 1.5rem;
+}
+
+.card-title {
+    color: var(--text-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card-text {
     color: #666;
-    margin: 0;
-    font-size: 0.9em;
-}
-
-/* 반응형 디자인 */
-@media (max-width: 992px) {
-    .images-container {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 576px) {
-    .images-container {
-        grid-template-columns: 1fr;
-    }
+    font-size: 0.95rem;
+    line-height: 1.6;
 }
 
 /* 공지사항 페이지 스타일 */
