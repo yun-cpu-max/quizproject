@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 만들기 - 맞추기 사이트</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .quiz-form {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .question-card {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        .add-question-btn {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="quiz-form">
+            <h1 class="mb-4">퀴즈 만들기</h1>
+            
+            <form id="quizForm" action="/quiz/create" method="POST">
+                <div class="mb-3">
+                    <label for="quizTitle" class="form-label">퀴즈 제목</label>
+                    <input type="text" class="form-control" id="quizTitle" name="title" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="quizDescription" class="form-label">퀴즈 설명</label>
+                    <textarea class="form-control" id="quizDescription" name="description" rows="3"></textarea>
+                </div>
+
+                <div id="questionsContainer">
+                    <!-- 질문들이 여기에 동적으로 추가됩니다 -->
+                </div>
+
+                <button type="button" class="btn btn-secondary add-question-btn" onclick="addQuestion()">
+                    질문 추가하기
+                </button>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">퀴즈 저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let questionCount = 0;
+
+        function addQuestion() {
+            questionCount++;
+            const questionHtml = `
+                <div class="question-card" id="question-${questionCount}">
+                    <div class="mb-3">
+                        <label class="form-label">질문 ${questionCount}</label>
+                        <input type="text" class="form-control" name="questions[${questionCount}][text]" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">정답</label>
+                        <input type="text" class="form-control" name="questions[${questionCount}][answer]" required>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeQuestion(${questionCount})">
+                        질문 삭제
+                    </button>
+                </div>
+            `;
+            document.getElementById('questionsContainer').insertAdjacentHTML('beforeend', questionHtml);
+        }
+
+        function removeQuestion(id) {
+            const questionElement = document.getElementById(`question-${id}`);
+            if (questionElement) {
+                questionElement.remove();
+            }
+        }
+
+        // 페이지 로드 시 첫 번째 질문 추가
+        window.onload = addQuestion;
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

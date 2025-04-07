@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 목록 - 맞추기 사이트</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .quiz-card {
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        .quiz-card:hover {
+            transform: translateY(-5px);
+        }
+        .quiz-header {
+            background-color: #4a3b8c;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .create-quiz-btn {
+            background-color: #8c3bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .create-quiz-btn:hover {
+            background-color: #7a2fe6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>퀴즈 목록</h1>
+                <% if (user) { %>
+                    <a href="/quiz/create" class="create-quiz-btn">퀴즈 만들기</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- 샘플 퀴즈 카드 -->
+            <div class="col-md-4">
+                <div class="card quiz-card">
+                    <div class="card-body">
+                        <h5 class="card-title">샘플 퀴즈 1</h5>
+                        <p class="card-text">간단한 설명이 들어갑니다.</p>
+                        <a href="/quiz/play/1" class="btn btn-primary">퀴즈 시작</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card quiz-card">
+                    <div class="card-body">
+                        <h5 class="card-title">샘플 퀴즈 2</h5>
+                        <p class="card-text">간단한 설명이 들어갑니다.</p>
+                        <a href="/quiz/play/2" class="btn btn-primary">퀴즈 시작</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card quiz-card">
+                    <div class="card-body">
+                        <h5 class="card-title">샘플 퀴즈 3</h5>
+                        <p class="card-text">간단한 설명이 들어갑니다.</p>
+                        <a href="/quiz/play/3" class="btn btn-primary">퀴즈 시작</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

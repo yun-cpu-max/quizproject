@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 결과 - 맞추기 사이트</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body {
+            background-color: #4a3b8c;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .result-container {
+            background: white;
+            max-width: 800px;
+            width: 100%;
+            margin: 20px;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .result-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        .correct-icon {
+            color: #28a745;
+        }
+        .incorrect-icon {
+            color: #dc3545;
+        }
+        .result-message {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .correct-answer {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .action-button {
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .retry-button {
+            background-color: #4a3b8c;
+            color: white;
+        }
+        .retry-button:hover {
+            background-color: #3a2b7c;
+            color: white;
+        }
+        .home-button {
+            background-color: #6c757d;
+            color: white;
+        }
+        .home-button:hover {
+            background-color: #5a6268;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <div class="result-icon">
+            <% if (isCorrect) { %>
+                ⭕
+            <% } else { %>
+                ❌
+            <% } %>
+        </div>
+        
+        <div class="result-message">
+            <% if (isCorrect) { %>
+                정답입니다!
+            <% } else { %>
+                아쉽네요!
+            <% } %>
+        </div>
+
+        <% if (!isCorrect) { %>
+            <div class="correct-answer">
+                정답은 "<%= correctAnswer %>" 입니다.
+            </div>
+        <% } %>
+
+        <div class="action-buttons">
+            <a href="/quiz" class="action-button retry-button">다른 문제 풀기</a>
+            <a href="/" class="action-button home-button">홈으로</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

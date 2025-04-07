@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const session = require("express-session");
+const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 
 const app = express();
 const PORT = 3000;
@@ -92,6 +93,9 @@ app.get('/myprofile', (req, res) => {
     }
     res.render('myprofile', { user: req.session.user });
 });
+
+// 퀴즈 라우터 추가
+app.use('/quiz', quizRouter);
 
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
