@@ -85,5 +85,13 @@ app.get('/notice', (req, res) => {
     res.render('notice', { user: req.session.user });
 });
 
+// 프로필 페이지 렌더링
+app.get('/myprofile', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    res.render('myprofile', { user: req.session.user });
+});
+
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));

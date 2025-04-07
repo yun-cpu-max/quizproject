@@ -29,12 +29,13 @@
                     </li>
                     <% if (user) { %>
                         <li class="nav-item">
-                            <span class="nav-link"> <%= user.username %>님!</span>
+                            <span class="nav-link"><%= user.username %>님!</span>
                         </li>
                     <% } %>
                 </ul>
                 <div class="d-flex">
                     <% if (user) { %>
+                        <a href="/myprofile" class="btn btn-outline-light me-2">내정보</a>
                         <a href="/logout" class="btn btn-outline-light">로그아웃</a>
                     <% } else { %>
                         <a href="/login" class="btn btn-outline-light me-2">로그인</a>
