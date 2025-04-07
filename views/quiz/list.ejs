@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 목록</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body {
+            background-color: #6c5ce7;
+            min-height: 100vh;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .quiz-card {
+            background-color: #fff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .quiz-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-bottom: 1px solid #eee;
+        }
+
+        .quiz-info {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .quiz-title {
+            color: #2d3436;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .quiz-description {
+            color: #636e72;
+            margin-bottom: 25px;
+        }
+
+        .count-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 0 20px;
+        }
+
+        .count-button {
+            background-color: #8c7ae6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 25px;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .count-button:hover {
+            background-color: #9c88ff;
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+
+        .navbar {
+            background-color: #5541b5 !important;
+        }
+
+        .logo {
+            height: 40px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/home.png" alt="홈" class="logo">
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light">홈으로</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="quiz-container">
+        <div class="quiz-card">
+            <img src="/rogo.png" alt="퀴즈 이미지" class="quiz-image">
+            
+            <div class="quiz-info">
+                <h2 class="quiz-title">국기 보고 나라 맞히기</h2>
+                <p class="quiz-description">국기만 보고, 어떤 나라에 국기인지 맞히는 퀴즈입니다.<br>국기를 보고 어떤 나라인지 한번 맞춰보세요.</p>
+            </div>
+
+            <div class="count-buttons mb-4">
+                <a href="/quiz/play/1?count=10" class="count-button">
+                    <i class="fas fa-play"></i> 10개 풀기
+                </a>
+                <a href="/quiz/play/1?count=20" class="count-button">
+                    <i class="fas fa-play"></i> 20개 풀기
+                </a>
+                <a href="/quiz/play/1?count=30" class="count-button">
+                    <i class="fas fa-play"></i> 30개 풀기
+                </a>
+                <a href="/quiz/play/1?count=50" class="count-button">
+                    <i class="fas fa-play"></i> 50개 풀기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+</body>
+</html> 
