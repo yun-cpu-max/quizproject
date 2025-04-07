@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
         }
     ];
     
-    res.render('quiz/index', { 
+    res.render('quiz/list', { 
         user: req.session.user,
         quizzes: quizzes
     });
@@ -66,14 +66,40 @@ router.post('/submit/:id', (req, res) => {
     }
 });
 
-// 퀴즈 결과 페이지
+// 개별 문제 결과 페이지
 router.get('/result/:id', (req, res) => {
     const isCorrect = req.query.correct === 'true';
+    const quizId = parseInt(req.params.id);
+    const nextQuizId = quizId + 1;
+    const totalQuizzes = 10; // 실제로는 DB에서 가져와야 함
     
-    res.render('quiz/result', {
+    // 마지막 문제인 경우
+    if (quizId >= totalQuizzes) {
+        res.redirect('/quiz/final-result');
+        return;
+    }
+    
+    res.render('quiz/question-result', {
         user: req.session.user,
         isCorrect: isCorrect,
-        correctAnswer: "123"
+        nextQuizId: nextQuizId,
+        currentQuizId: quizId,
+        totalQuizzes: totalQuizzes
+    });
+});
+
+// 최종 결과 페이지
+router.get('/final-result', (req, res) => {
+    // 실제로는 세션이나 DB에서 사용자의 퀴즈 결과를 가져와야 함
+    const sampleResults = {
+        correctCount: 6,
+        totalQuizzes: 10,
+        percentage: 30
+    };
+    
+    res.render('quiz/final-result', {
+        user: req.session.user,
+        results: sampleResults
     });
 });
 
