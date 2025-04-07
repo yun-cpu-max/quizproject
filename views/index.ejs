@@ -56,15 +56,17 @@
 
     <div class="image-grid">
         <% images.forEach(img => { %>
-            <div class="image-card card">
-                <div class="image-container">
-                    <img src="<%= img.src %>" alt="<%= img.title %>" class="card-img-top">
+            <a href="/quiz/play/<%= img.id %>" class="image-card-link" style="text-decoration: none; color: inherit;">
+                <div class="image-card card">
+                    <div class="image-container">
+                        <img src="<%= img.src %>" alt="<%= img.title %>" class="card-img-top">
+                    </div>
+                    <div class="image-info card-body">
+                        <h3 class="card-title"><%= img.title %></h3>
+                        <p class="card-text"><%= img.description %></p>
+                    </div>
                 </div>
-                <div class="image-info card-body">
-                    <h3 class="card-title"><%= img.title %></h3>
-                    <p class="card-text"><%= img.description %></p>
-                </div>
-            </div>
+            </a>
         <% }) %>
     </div>
 

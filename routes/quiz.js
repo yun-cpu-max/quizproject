@@ -39,16 +39,34 @@ router.post('/create', (req, res) => {
 });
 
 // 퀴즈 플레이 페이지
+router.get('/play', (req, res) => {
+    // ID가 없는 경우 메인 페이지로 리다이렉트
+    res.redirect('/quiz');
+});
+
 router.get('/play/:id', (req, res) => {
-    // 샘플 퀴즈 데이터
-    const quizId = req.params.id;
-    const quizData = {
-        quizId: quizId,
-        questionImage: "/images/sample-question.jpg",
-        questionText: "샘플 문제입니다."
-    };
-    
-    res.render('quiz/play', quizData);
+    try {
+        const quizId = req.params.id;
+        const count = parseInt(req.query.count) || 10; // 기본값 10문제
+        
+        // 퀴즈 데이터 (실제로는 DB에서 가져와야 함)
+        const quizData = {
+            quizId: quizId,
+            questionImage: "/rogo.png",  // 임시로 로고 이미지 사용
+            questionText: "이 국기는 어느 나라의 국기일까요?",
+            totalQuestions: count,
+            currentQuestion: 1
+        };
+        
+        // 세션에 총 문제 수 저장
+        req.session.totalQuestions = count;
+        req.session.currentQuestion = 1;
+        
+        res.render('quiz/play', quizData);
+    } catch (error) {
+        console.error('퀴즈 플레이 페이지 에러:', error);
+        res.redirect('/quiz');
+    }
 });
 
 // 퀴즈 정답 제출 처리
