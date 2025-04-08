@@ -53,7 +53,7 @@ router.get('/play/:id', (req, res) => {
         const quizData = {
             quizId: quizId,
             questionImage: "/rogo.png",  // 임시로 로고 이미지 사용
-            questionText: "이 국기는 어느 나라의 국기일까요?",
+            questionText: "정답이 123인 테스트 문항",
             totalQuestions: count,
             currentQuestion: 1
         };
