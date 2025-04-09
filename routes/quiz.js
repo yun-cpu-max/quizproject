@@ -1,21 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
-    // 샘플 퀴즈 데이터
-    const quizzes = [
-        {
-            id: 1,
-            title: "시각적 효과 퀴즈",
-            description: "이미지를 보고 답을 맞춰보세요",
-            thumbnail: "/images/quiz1.jpg"
-        }
-    ];
-    
     res.render('quiz/list', { 
         user: req.session.user,
-        quizzes: quizzes,
+        quizzes: quizData,
         isSingleQuiz: false
     });
 });
@@ -24,13 +15,12 @@ router.get('/', (req, res) => {
 router.get('/list/:id', (req, res) => {
     const quizId = parseInt(req.params.id);
     
-    // 샘플 퀴즈 데이터 (실제로는 DB에서 가져와야 함)
-    const quiz = {
-        id: quizId,
-        title: "시각적 효과 퀴즈",
-        description: "이미지를 보고 답을 맞춰보세요",
-        thumbnail: "/rogo.png"
-    };
+    // quizData 배열에서 해당 id의 퀴즈 찾기
+    const quiz = quizData.find(img => img.id === quizId);
+    
+    if (!quiz) {
+        return res.redirect('/quiz');
+    }
     
     res.render('quiz/list', { 
         user: req.session.user,

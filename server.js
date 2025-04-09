@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
+const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 
 const app = express();
 const PORT = 3000;
@@ -32,13 +33,13 @@ const images = [
 
 // 메인 페이지 라우트
 app.get("/", (req, res) => {
-  res.render("index", { images, user: req.session.user });
+  res.render("index", { images: quizData, user: req.session.user });
 });
 
 // 검색 기능 (사용자가 검색어 입력하면 필터링)
 app.post("/search", (req, res) => {
   const searchTerm = req.body.search.toLowerCase();
-  const filteredImages = images.filter(img =>
+  const filteredImages = quizData.filter(img =>
     img.title.toLowerCase().includes(searchTerm) || img.description.toLowerCase().includes(searchTerm)
   );
   res.render("index", { images: filteredImages, user: req.session.user });
