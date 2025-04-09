@@ -15,7 +15,27 @@ router.get('/', (req, res) => {
     
     res.render('quiz/list', { 
         user: req.session.user,
-        quizzes: quizzes
+        quizzes: quizzes,
+        isSingleQuiz: false
+    });
+});
+
+// 특정 퀴즈 상세 페이지
+router.get('/list/:id', (req, res) => {
+    const quizId = parseInt(req.params.id);
+    
+    // 샘플 퀴즈 데이터 (실제로는 DB에서 가져와야 함)
+    const quiz = {
+        id: quizId,
+        title: "시각적 효과 퀴즈",
+        description: "이미지를 보고 답을 맞춰보세요",
+        thumbnail: "/rogo.png"
+    };
+    
+    res.render('quiz/list', { 
+        user: req.session.user,
+        quiz: quiz,
+        isSingleQuiz: true
     });
 });
 
