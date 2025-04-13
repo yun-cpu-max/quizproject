@@ -1,30 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
+const testQuizData = require('../data/testQuizData');  // 테스트용 퀴즈 데이터
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
-    res.render('quiz/list', { 
-        user: req.session.user,
-        quizzes: quizData,
-        isSingleQuiz: false
-    });
+    res.redirect('/');
 });
 
 // 특정 퀴즈 상세 페이지
 router.get('/list/:id', (req, res) => {
     const quizId = parseInt(req.params.id);
     
-    // quizData 배열에서 해당 id의 퀴즈 찾기
-    const quiz = quizData.find(img => img.id === quizId);
+    // quizData에서 해당 id의 퀴즈 찾기
+    const quiz = quizData.quiz.find(q => q.id === quizId);
     
     if (!quiz) {
-        return res.redirect('/quiz');
+        return res.redirect('/');
+    }
+    
+    // 퀴즈에 해당하는 문제들 찾기
+    const questions = quizData.question.filter(q => q.quiz_id === quizId);
+    
+    // 객관식 문제인 경우 선택지도 가져오기
+    if (quiz.category === 'choiceQuiz') {
+        questions.forEach(question => {
+            question.options = quizData.question_option.filter(opt => opt.question_id === question.id);
+        });
     }
     
     res.render('quiz/list', { 
         user: req.session.user,
         quiz: quiz,
+        questions: questions,
         isSingleQuiz: true
     });
 });
@@ -57,49 +65,80 @@ router.get('/play', (req, res) => {
 router.get('/play/:id', (req, res) => {
     try {
         const quizId = parseInt(req.params.id);
-        const count = parseInt(req.query.count) || 10; // 기본값 10문제
+        const count = parseInt(req.query.count) || 10;
         
-        // 퀴즈 데이터 (실제로는 DB에서 가져와야 함)
-        const quizData = {
-            quizId: quizId,  // 정수형으로 변환
-            questionImage: "/rogo.png",  // 임시로 로고 이미지 사용
-            questionText: "정답이 123인 테스트 문항",
-            totalQuestions: count,
-            currentQuestion: 1
+        // 퀴즈 정보 가져오기
+        const quiz = quizData.quiz.find(q => q.id === quizId);
+        if (!quiz) {
+            throw new Error('퀴즈를 찾을 수 없습니다.');
+        }
+
+        // 현재 문제 번호
+        const currentQuestionNum = req.session.currentQuestion || 1;
+        
+        // 해당 퀴즈의 문제들 가져오기
+        const questions = quizData.question.filter(q => q.quiz_id === quizId);
+        if (currentQuestionNum > questions.length) {
+            return res.redirect('/quiz/final-result');
+        }
+
+        const currentQuestion = questions[currentQuestionNum - 1];
+        
+        // 퀴즈 데이터 준비
+        const quizPlayData = {
+            quizId: quizId,
+            questionImage: "/rogo.png",
+            questionText: currentQuestion.question,
+            totalQuestions: Math.min(count, questions.length),
+            currentQuestion: currentQuestionNum,
+            questionType: currentQuestion.question_type
         };
+
+        // 객관식 문제인 경우 선택지 추가
+        if (quiz.category === 'choiceQuiz') {
+            quizPlayData.options = quizData.question_option
+                .filter(opt => opt.question_id === currentQuestion.id)
+                .sort((a, b) => a.order - b.order);
+        }
         
-        // 세션에 총 문제 수 저장
-        req.session.totalQuestions = count;
-        req.session.currentQuestion = 1;
+        // 세션에 정보 저장
+        req.session.totalQuestions = quizPlayData.totalQuestions;
+        req.session.currentQuestion = currentQuestionNum;
         
-        res.render('quiz/play', quizData);
+        res.render('quiz/play', quizPlayData);
     } catch (error) {
         console.error('퀴즈 플레이 페이지 에러:', error);
-        res.redirect('/quiz');
+        res.redirect('/');
     }
 });
 
 // 퀴즈 정답 제출 처리
 router.post('/submit/:id', (req, res) => {
     try {
-        console.log('Received answer:', req.body); // 디버깅용
         const answer = req.body.answer;
         const quizId = parseInt(req.params.id);
         
         if (!answer) {
             return res.status(400).json({ error: '답안이 제출되지 않았습니다.' });
         }
+
+        // 현재 문제 정보 가져오기
+        const currentQuestionNum = req.session.currentQuestion || 1;
+        const questions = quizData.question.filter(q => q.quiz_id === quizId);
+        const currentQuestion = questions[currentQuestionNum - 1];
         
-        // 정답 체크 로직 (실제로는 DB에서 정답을 확인해야 함)
-        const isCorrect = answer === "123";
+        // 정답 체크
+        const isCorrect = answer === currentQuestion.correct_answer;
         
         const response = {
             isCorrect: isCorrect,
-            correctAnswer: "123", // 실제로는 DB에서 가져와야 함
-            nextQuizId: quizId + 1
+            correctAnswer: currentQuestion.correct_answer,
+            nextQuizId: quizId
         };
         
-        console.log('Sending response:', response); // 디버깅용
+        // 다음 문제 번호 저장
+        req.session.currentQuestion = currentQuestionNum + 1;
+        
         res.json(response);
     } catch (error) {
         console.error('Submit error:', error);
