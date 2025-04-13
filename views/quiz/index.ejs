@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 목록</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body {
+            background-color: #6c5ce7;
+            min-height: 100vh;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .navbar {
+            background-color: #5541b5 !important;
+        }
+
+        .logo {
+            height: 40px;
+            width: auto;
+        }
+
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .quiz-card {
+            background-color: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .quiz-image {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+        }
+
+        .quiz-info {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .quiz-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #2d3436;
+        }
+
+        .quiz-description {
+            color: #636e72;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/home.png" alt="홈" class="logo">
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light">홈으로</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="quiz-grid">
+        <% quizzes.forEach(quiz => { %>
+            <a href="/quiz/select/<%= quiz.id %>" class="quiz-card">
+                <img src="<%= quiz.thumbnail %>" alt="<%= quiz.title %>" class="quiz-image">
+                <div class="quiz-info">
+                    <h2 class="quiz-title"><%= quiz.title %></h2>
+                    <p class="quiz-description"><%= quiz.description %></p>
+                </div>
+            </a>
+        <% }); %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
