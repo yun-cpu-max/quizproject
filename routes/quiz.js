@@ -73,38 +73,57 @@ router.get('/play/:id', (req, res) => {
             throw new Error('퀴즈를 찾을 수 없습니다.');
         }
 
-        // 현재 문제 번호
-        const currentQuestionNum = req.session.currentQuestion || 1;
-        
         // 해당 퀴즈의 문제들 가져오기
         const questions = quizData.question.filter(q => q.quiz_id === quizId);
-        if (currentQuestionNum > questions.length) {
+        
+        // URL의 count 파라미터가 변경되었거나 새로운 퀴즈를 시작할 경우 세션 초기화
+        if (!req.session.quizId || 
+            req.session.quizId !== quizId || 
+            req.session.totalQuestions !== count) {
+            
+            req.session.quizId = quizId;
+            req.session.currentQuestion = 1;
+            req.session.totalQuestions = Math.min(count, questions.length);
+            req.session.results = [];
+        }
+
+        const currentQuestionNum = req.session.currentQuestion;
+        
+        // 퀴즈 완료 체크
+        if (currentQuestionNum > req.session.totalQuestions) {
             return res.redirect('/quiz/final-result');
         }
 
         const currentQuestion = questions[currentQuestionNum - 1];
+        if (!currentQuestion) {
+            throw new Error('문제를 찾을 수 없습니다.');
+        }
         
         // 퀴즈 데이터 준비
         const quizPlayData = {
             quizId: quizId,
             questionImage: "/rogo.png",
             questionText: currentQuestion.question,
-            totalQuestions: Math.min(count, questions.length),
+            totalQuestions: req.session.totalQuestions,
             currentQuestion: currentQuestionNum,
             questionType: currentQuestion.question_type
         };
 
-        // 객관식 문제인 경우 선택지 추가
-        if (quiz.category === 'choiceQuiz') {
-            quizPlayData.options = quizData.question_option
-                .filter(opt => opt.question_id === currentQuestion.id)
-                .sort((a, b) => a.order - b.order);
+        // 객관식 문제인 경우 선택지 추가 및 무작위 섞기
+        if (currentQuestion.question_type === 'choice') {
+            let options = quizData.question_option
+                .filter(opt => opt.question_id === currentQuestion.id);
+            
+            // 선택지 무작위 섞기
+            options = options.sort(() => Math.random() - 0.5);
+            
+            quizPlayData.options = options;
+            
+            // 객관식 템플릿 렌더링
+            return res.render('quiz/choice-play', quizPlayData);
         }
         
-        // 세션에 정보 저장
-        req.session.totalQuestions = quizPlayData.totalQuestions;
-        req.session.currentQuestion = currentQuestionNum;
-        
+        // 주관식 템플릿 렌더링
         res.render('quiz/play', quizPlayData);
     } catch (error) {
         console.error('퀴즈 플레이 페이지 에러:', error);
@@ -113,36 +132,64 @@ router.get('/play/:id', (req, res) => {
 });
 
 // 퀴즈 정답 제출 처리
-router.post('/submit/:id', (req, res) => {
+router.post('/submit', (req, res) => {
     try {
-        const answer = req.body.answer;
-        const quizId = parseInt(req.params.id);
-        
-        if (!answer) {
-            return res.status(400).json({ error: '답안이 제출되지 않았습니다.' });
-        }
+        const { answer, questionType } = req.body;
+        const currentQuestionNum = req.session.currentQuestion || 1;
+        const quizId = req.session.quizId;
 
         // 현재 문제 정보 가져오기
-        const currentQuestionNum = req.session.currentQuestion || 1;
         const questions = quizData.question.filter(q => q.quiz_id === quizId);
+        if (!questions || questions.length === 0) {
+            throw new Error('퀴즈를 찾을 수 없습니다.');
+        }
+
         const currentQuestion = questions[currentQuestionNum - 1];
-        
-        // 정답 체크
-        const isCorrect = answer === currentQuestion.correct_answer;
-        
-        const response = {
-            isCorrect: isCorrect,
-            correctAnswer: currentQuestion.correct_answer,
-            nextQuizId: quizId
-        };
-        
-        // 다음 문제 번호 저장
+        if (!currentQuestion || currentQuestion.question_type !== questionType) {
+            throw new Error('문제를 찾을 수 없습니다.');
+        }
+
+        let isCorrect = false;
+        let responseData = {};
+
+        if (questionType === 'choice') {
+            // 객관식 답안 처리
+            const correctOption = quizData.question_option.find(opt => 
+                opt.question_id === currentQuestion.id && 
+                opt.is_correct
+            );
+
+            isCorrect = answer === correctOption.id.toString();
+            responseData = {
+                isCorrect,
+                correctAnswer: correctOption.id.toString()
+            };
+        } else {
+            // 주관식 답안 처리
+            isCorrect = answer.trim().toLowerCase() === currentQuestion.correct_answer.trim().toLowerCase();
+            responseData = {
+                isCorrect,
+                correctAnswer: currentQuestion.correct_answer
+            };
+        }
+
+        // 결과 저장
+        if (!req.session.results) {
+            req.session.results = [];
+        }
+        req.session.results.push({
+            questionId: currentQuestion.id,
+            userAnswer: answer,
+            isCorrect
+        });
+
+        // 다음 문제로 이동
         req.session.currentQuestion = currentQuestionNum + 1;
-        
-        res.json(response);
+
+        res.json(responseData);
     } catch (error) {
-        console.error('Submit error:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+        console.error('답안 제출 에러:', error);
+        res.status(500).json({ error: '답안 처리 중 오류가 발생했습니다.' });
     }
 });
 
