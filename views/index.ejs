@@ -56,10 +56,10 @@
 
     <div class="image-grid">
         <% images.forEach(img => { %>
-            <a href="/quiz/play/<%= img.id %>" class="image-card-link" style="text-decoration: none; color: inherit;">
+            <a href="/quiz/list/<%= img.id %>" class="image-card-link" style="text-decoration: none; color: inherit;">
                 <div class="image-card card">
                     <div class="image-container">
-                        <img src="<%= img.src %>" alt="<%= img.title %>" class="card-img-top">
+                        <img src="<%= img.thumbnail %>" alt="<%= img.title %>" class="card-img-top">
                     </div>
                     <div class="image-info card-body">
                         <h3 class="card-title"><%= img.title %></h3>
@@ -69,6 +69,7 @@
             </a>
         <% }) %>
     </div>
+    
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

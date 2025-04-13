@@ -1,21 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
-    // 샘플 퀴즈 데이터
-    const quizzes = [
-        {
-            id: 1,
-            title: "시각적 효과 퀴즈",
-            description: "이미지를 보고 답을 맞춰보세요",
-            thumbnail: "/images/quiz1.jpg"
-        }
-    ];
+    res.render('quiz/list', { 
+        user: req.session.user,
+        quizzes: quizData,
+        isSingleQuiz: false
+    });
+});
+
+// 특정 퀴즈 상세 페이지
+router.get('/list/:id', (req, res) => {
+    const quizId = parseInt(req.params.id);
+    
+    // quizData 배열에서 해당 id의 퀴즈 찾기
+    const quiz = quizData.find(img => img.id === quizId);
+    
+    if (!quiz) {
+        return res.redirect('/quiz');
+    }
     
     res.render('quiz/list', { 
         user: req.session.user,
-        quizzes: quizzes
+        quiz: quiz,
+        isSingleQuiz: true
     });
 });
 
@@ -46,14 +56,14 @@ router.get('/play', (req, res) => {
 
 router.get('/play/:id', (req, res) => {
     try {
-        const quizId = req.params.id;
+        const quizId = parseInt(req.params.id);
         const count = parseInt(req.query.count) || 10; // 기본값 10문제
         
         // 퀴즈 데이터 (실제로는 DB에서 가져와야 함)
         const quizData = {
-            quizId: quizId,
+            quizId: quizId,  // 정수형으로 변환
             questionImage: "/rogo.png",  // 임시로 로고 이미지 사용
-            questionText: "이 국기는 어느 나라의 국기일까요?",
+            questionText: "정답이 123인 테스트 문항",
             totalQuestions: count,
             currentQuestion: 1
         };
@@ -71,16 +81,29 @@ router.get('/play/:id', (req, res) => {
 
 // 퀴즈 정답 제출 처리
 router.post('/submit/:id', (req, res) => {
-    const answer = req.body.answer;
-    const quizId = req.params.id;
-    
-    // 정답 체크 로직
-    const isCorrect = answer === "123"; // 실제로는 DB에서 정답을 확인해야 함
-    
-    if (isCorrect) {
-        res.redirect(`/quiz/result/${quizId}?correct=true`);
-    } else {
-        res.redirect(`/quiz/result/${quizId}?correct=false`);
+    try {
+        console.log('Received answer:', req.body); // 디버깅용
+        const answer = req.body.answer;
+        const quizId = parseInt(req.params.id);
+        
+        if (!answer) {
+            return res.status(400).json({ error: '답안이 제출되지 않았습니다.' });
+        }
+        
+        // 정답 체크 로직 (실제로는 DB에서 정답을 확인해야 함)
+        const isCorrect = answer === "123";
+        
+        const response = {
+            isCorrect: isCorrect,
+            correctAnswer: "123", // 실제로는 DB에서 가져와야 함
+            nextQuizId: quizId + 1
+        };
+        
+        console.log('Sending response:', response); // 디버깅용
+        res.json(response);
+    } catch (error) {
+        console.error('Submit error:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
 
