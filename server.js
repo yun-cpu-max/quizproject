@@ -11,6 +11,7 @@ const PORT = 3000;
 app.set("view engine", "ejs");
 app.use(express.static("public")); // CSS, 이미지 파일 사용 가능
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json()); // JSON 파싱 미들웨어 추가
 
 // 세션 설정
 app.use(session({
