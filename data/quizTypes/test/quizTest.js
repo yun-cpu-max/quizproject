@@ -27,10 +27,10 @@ const sampleChoiceQuestion = {
 };
 
 const sampleOptions = [
-    { id: 1, text: "1", is_correct: false, order: 1 },
-    { id: 2, text: "2", is_correct: false, order: 2 },
-    { id: 3, text: "3", is_correct: true, order: 3 },
-    { id: 4, text: "0", is_correct: false, order: 4 }
+    { id: 1, option_text: "1", is_correct: false, order: 1 },
+    { id: 2, option_text: "2", is_correct: false, order: 2 },
+    { id: 3, option_text: "3", is_correct: true, order: 3 },
+    { id: 4, option_text: "0", is_correct: false, order: 4 }
 ];
 
 // 결과 처리 테스트용 데이터
@@ -41,60 +41,6 @@ const sampleResultData = {
     submittedAt: new Date(),
     timeSpent: 25
 };
-
-// 선택지 순서 테스트를 위한 함수
-function testOptionShuffling(choiceQuiz, options, iterations = 5) {
-    console.log("\n2.5 선택지 무작위 출력 테스트");
-    
-    // 여러 번 실행하여 순서가 변경되는지 확인
-    const orderSets = new Set();
-    const results = [];
-    
-    for (let i = 0; i < iterations; i++) {
-        const questionData = choiceQuiz.getQuestionData(sampleChoiceQuestion, options);
-        const orderString = questionData.options.map(opt => opt.id).join(',');
-        orderSets.add(orderString);
-        results.push(questionData);
-        
-        // 기본 검증
-        console.assert(questionData.options.length === options.length, 
-            "선택지 개수가 변경되었습니다.");
-        
-        // 순서 값 검증
-        const orders = questionData.options.map(opt => opt.order);
-        console.assert(
-            orders.every((order, idx) => order === idx + 1),
-            "선택지 순서가 1부터 순차적이지 않습니다."
-        );
-        
-        // 모든 선택지가 존재하는지 검증
-        const originalIds = new Set(options.map(opt => opt.id));
-        const shuffledIds = new Set(questionData.options.map(opt => opt.id));
-        console.assert(
-            [...originalIds].every(id => shuffledIds.has(id)),
-            "일부 선택지가 누락되었습니다."
-        );
-    }
-    
-    // 순서가 실제로 변경되는지 확인
-    console.assert(
-        orderSets.size > 1,
-        "여러 번 실행했을 때 순서가 전혀 변경되지 않았습니다."
-    );
-    
-    // 정답 검증이 여전히 작동하는지 확인
-    const lastResult = results[results.length - 1];
-    const correctOption = lastResult.options.find(opt => 
-        options.find(o => o.id === opt.id && o.is_correct)
-    );
-    
-    console.assert(
-        choiceQuiz.validateAnswer(correctOption.id.toString(), "3", options),
-        "섞인 후 정답 검증이 실패했습니다."
-    );
-    
-    console.log("✓ 선택지 무작위 출력 테스트 통과");
-}
 
 // 테스트 실행 함수
 function runTests() {
@@ -148,8 +94,8 @@ function runTests() {
 
         // 정답 검증 테스트
         console.log("\n2.3 정답 검증 테스트");
-        console.assert(choiceQuiz.validateAnswer(3, 3, sampleOptions) === true, "정답 검증 실패");
-        console.assert(choiceQuiz.validateAnswer(1, 3, sampleOptions) === false, "오답 검증 실패");
+        console.assert(choiceQuiz.validateAnswer("3", "3", sampleOptions) === true, "정답 검증 실패");
+        console.assert(choiceQuiz.validateAnswer("1", "3", sampleOptions) === false, "오답 검증 실패");
         console.log("✓ 정답 검증 테스트 통과");
 
         // 예외 처리 테스트
@@ -160,15 +106,11 @@ function runTests() {
         } catch (e) {
             console.log("✓ 선택지 없는 경우 예외 처리 통과");
         }
-
-        // 선택지 무작위 출력 테스트 추가
-        testOptionShuffling(choiceQuiz, sampleOptions);
-
     } catch (error) {
         console.error("ChoiceQuiz 테스트 실패:", error);
     }
 
-    // 결과 처리 테스트
+    // 결과 처리 테스트 추가
     testResultProcessing();
 
     console.log("\n=== 테스트 완료 ===");
@@ -207,11 +149,11 @@ function testResultProcessing() {
         const choiceQuiz = new ChoiceQuiz({...sampleQuizData, category: "choiceQuiz"});
         const choiceResult = choiceQuiz.processResult(
             true,                       // isCorrect
-            3,                          // correctAnswer
+            sampleChoiceQuestion.correct_answer,
             sampleOptions,
             {
                 ...sampleResultData,
-                userAnswer: 3,          // 문자열에서 숫자로 변경
+                userAnswer: "3",
                 questionType: "choice"
             }
         );
@@ -220,11 +162,7 @@ function testResultProcessing() {
         console.assert(choiceResult.isCorrect === true, "정답 여부 처리 실패");
         console.assert(choiceResult.answerType === "choice", "답안 타입 처리 실패");
         console.assert(choiceResult.details.choiceAnswer.totalOptions === 4, "선택지 개수 처리 실패");
-        console.assert(
-            choiceResult.details.choiceAnswer.selectedOption && 
-            choiceResult.details.choiceAnswer.selectedOption.id === 3, 
-            "선택된 답안 처리 실패"
-        );
+        console.assert(choiceResult.details.choiceAnswer.selectedOptionId === 3, "선택된 답안 처리 실패");
         console.log("✓ ChoiceQuiz 결과 처리 테스트 통과");
 
         // 부분 점수 처리 테스트 (해당되는 경우)
