@@ -3,18 +3,10 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
-const mysql = require('mysql2');
+const db = require('./db');
 
 const app = express();
 const PORT = 3000;
-
-// MySQL 연결 설정
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',        // MySQL 사용자 이름
-    password: 'mysql@24!',        // MySQL 비밀번호
-    database: 'quiz_db'  // 데이터베이스 이름
-});
 
 // MySQL 연결
 db.connect((err) => {
@@ -152,8 +144,168 @@ app.post('/signup', (req, res) => {
     });
 });
 
+// 정보 수정 페이지 렌더링
+app.get('/edit-profile', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    res.render('edit-profile', { 
+        user: req.session.user,
+        error: null,
+        success: null
+    });
+});
+
+// 정보 수정 처리
+app.post('/edit-profile', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    const { username, email, currentPassword } = req.body;
+    const userId = req.session.user.id;
+
+    // 현재 비밀번호 확인
+    const checkPasswordQuery = 'SELECT * FROM user WHERE id = ? AND password = ?';
+    db.query(checkPasswordQuery, [userId, currentPassword], (err, results) => {
+        if (err) {
+            console.error('비밀번호 확인 실패:', err);
+            return res.render('edit-profile', {
+                user: req.session.user,
+                error: '서버 오류가 발생했습니다.',
+                success: null
+            });
+        }
+
+        if (results.length === 0) {
+            return res.render('edit-profile', {
+                user: req.session.user,
+                error: '현재 비밀번호가 일치하지 않습니다.',
+                success: null
+            });
+        }
+
+        // 중복 확인 (자신의 아이디는 제외)
+        const checkQuery = 'SELECT * FROM user WHERE (username = ? OR email = ?) AND id != ?';
+        db.query(checkQuery, [username, email, userId], (err, results) => {
+            if (err) {
+                console.error('중복 확인 실패:', err);
+                return res.render('edit-profile', {
+                    user: req.session.user,
+                    error: '서버 오류가 발생했습니다.',
+                    success: null
+                });
+            }
+
+            if (results.length > 0) {
+                return res.render('edit-profile', {
+                    user: req.session.user,
+                    error: '이미 사용 중인 아이디 또는 이메일입니다.',
+                    success: null
+                });
+            }
+
+            // 정보 업데이트
+            const updateQuery = 'UPDATE user SET username = ?, email = ?, updated_at = NOW() WHERE id = ?';
+            db.query(updateQuery, [username, email, userId], (err, result) => {
+                if (err) {
+                    console.error('정보 수정 실패:', err);
+                    return res.render('edit-profile', {
+                        user: req.session.user,
+                        error: '정보 수정 중 오류가 발생했습니다.',
+                        success: null
+                    });
+                }
+
+                // 세션 업데이트
+                req.session.user.username = username;
+                req.session.user.email = email;
+                
+                res.render('edit-profile', {
+                    user: req.session.user,
+                    error: null,
+                    success: '정보가 성공적으로 수정되었습니다.'
+                });
+            });
+        });
+    });
+});
+
+// 비밀번호 변경 페이지 렌더링
+app.get('/change-password', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    res.render('change-password', { 
+        user: req.session.user,
+        error: null,
+        success: null
+    });
+});
+
+// 비밀번호 변경 처리
+app.post('/change-password', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.session.user.id;
+
+    // 새 비밀번호 확인
+    if (newPassword !== confirmPassword) {
+        return res.render('change-password', {
+            user: req.session.user,
+            error: '새 비밀번호가 일치하지 않습니다.',
+            success: null
+        });
+    }
+
+    // 현재 비밀번호 확인
+    const checkQuery = 'SELECT * FROM user WHERE id = ? AND password = ?';
+    db.query(checkQuery, [userId, currentPassword], (err, results) => {
+        if (err) {
+            console.error('비밀번호 확인 실패:', err);
+            return res.render('change-password', {
+                user: req.session.user,
+                error: '서버 오류가 발생했습니다.',
+                success: null
+            });
+        }
+
+        if (results.length === 0) {
+            return res.render('change-password', {
+                user: req.session.user,
+                error: '현재 비밀번호가 일치하지 않습니다.',
+                success: null
+            });
+        }
+
+        // 비밀번호 업데이트
+        const updateQuery = 'UPDATE user SET password = ?, updated_at = NOW() WHERE id = ?';
+        db.query(updateQuery, [newPassword, userId], (err, result) => {
+            if (err) {
+                console.error('비밀번호 변경 실패:', err);
+                return res.render('change-password', {
+                    user: req.session.user,
+                    error: '비밀번호 변경 중 오류가 발생했습니다.',
+                    success: null
+                });
+            }
+
+            res.render('change-password', {
+                user: req.session.user,
+                error: null,
+                success: '비밀번호가 성공적으로 변경되었습니다.'
+            });
+        });
+    });
+});
+
 // 퀴즈 라우터 추가
 app.use('/quiz', quizRouter);
 
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
+
+module.exports.db = db;
