@@ -153,14 +153,18 @@
         <div class="quiz-text">
             <%= questionText %>
         </div>
-        <div class="result-message"></div>
         <div class="options-container">
-            <% options.forEach(function(option) { %>
-                <button class="option-button" data-option-id="<%= option.id %>">
-                    <%= option.option_text %>
-                </button>
-            <% }); %>
+            <% if (options && options.length > 0) { %>
+                <% options.forEach(function(option) { %>
+                    <button class="option-button" data-option-id="<%= option.id %>">
+                        <%= option.option_text %>
+                    </button>
+                <% }); %>
+            <% } else { %>
+                <div style="color: #333; margin-top: 20px;">선택지가 없습니다.</div>
+            <% } %>
         </div>
+        <div class="result-message"></div>
         <button class="next-button">다음 문제</button>
     </div>
 
@@ -191,7 +195,7 @@
                     },
                     body: JSON.stringify({
                         answer: selectedOptionId,
-                        questionType: 'choice'
+                        questionType: '<%= questionType %>'
                     })
                 })
                 .then(response => response.json())

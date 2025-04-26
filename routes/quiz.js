@@ -94,7 +94,7 @@ router.get('/play/:id', async (req, res) => {
             questionType: currentQuestion.question_type
         };
 
-        if (currentQuestion.question_type === 'choice') {
+        if (currentQuestion.question_type === 'multiple_choice') {
             let options = currentQuestion.options || [];
             options = options.sort(() => Math.random() - 0.5);
             quizPlayData.options = options;
@@ -129,7 +129,7 @@ router.post('/submit', async (req, res) => {
         let isCorrect = false;
         let responseData = {};
 
-        if (questionType === 'choice') {
+        if (questionType === 'multiple_choice') {
             // 객관식 답안 처리
             const correctOption = (currentQuestion.options || []).find(opt => opt.is_correct);
             isCorrect = answer === String(correctOption.id);
@@ -224,4 +224,5 @@ router.get('/final-result', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;
+
