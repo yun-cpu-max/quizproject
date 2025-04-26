@@ -53,14 +53,15 @@ const images = [
 
 // 메인 페이지 라우트
 app.get("/", (req, res) => {
-  res.render("index", { images: quizData, user: req.session.user });
+  res.render("index", { images: quizData.quiz, user: req.session.user });
 });
 
 // 검색 기능 (사용자가 검색어 입력하면 필터링)
 app.post("/search", (req, res) => {
   const searchTerm = req.body.search.toLowerCase();
-  const filteredImages = quizData.filter(img =>
-    img.title.toLowerCase().includes(searchTerm) || img.description.toLowerCase().includes(searchTerm)
+  const filteredImages = quizData.quiz.filter(img =>
+    img.title.toLowerCase().includes(searchTerm) || 
+    img.description.toLowerCase().includes(searchTerm)
   );
   res.render("index", { images: filteredImages, user: req.session.user });
 });
