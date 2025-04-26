@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
-const testQuizData = require('../data/testQuizData');  // 테스트용 퀴즈 데이터
+const { Quiz } = require('../models/Quiz');
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -9,26 +8,20 @@ router.get('/', (req, res) => {
 });
 
 // 특정 퀴즈 상세 페이지
-router.get('/list/:id', (req, res) => {
+router.get('/list/:id', async (req, res) => {
     const quizId = parseInt(req.params.id);
-    
-    // quizData에서 해당 id의 퀴즈 찾기
-    const quiz = quizData.quiz.find(q => q.id === quizId);
-    
+
+    // DB에서 퀴즈 및 문제 불러오기
+    const quiz = await Quiz.getById(quizId);
+
     if (!quiz) {
         return res.redirect('/');
     }
-    
-    // 퀴즈에 해당하는 문제들 찾기
-    const questions = quizData.question.filter(q => q.quiz_id === quizId);
-    
-    // 객관식 문제인 경우 선택지도 가져오기
-    if (quiz.category === 'choiceQuiz') {
-        questions.forEach(question => {
-            question.options = quizData.question_option.filter(opt => opt.question_id === question.id);
-        });
-    }
-    
+
+    // 문제 목록
+    const questions = quiz.questions;
+
+    // 객관식 문제라면 각 문제에 options가 포함되어 있음
     res.render('quiz/list', { 
         user: req.session.user,
         quiz: quiz,
@@ -62,25 +55,20 @@ router.get('/play', (req, res) => {
     res.redirect('/quiz');
 });
 
-router.get('/play/:id', (req, res) => {
+router.get('/play/:id', async (req, res) => {
     try {
         const quizId = parseInt(req.params.id);
         const count = parseInt(req.query.count) || 10;
-        
-        // 퀴즈 정보 가져오기
-        const quiz = quizData.quiz.find(q => q.id === quizId);
+
+        // DB에서 퀴즈 정보 및 문제, 선택지 불러오기
+        const quiz = await Quiz.getById(quizId);
         if (!quiz) {
             throw new Error('퀴즈를 찾을 수 없습니다.');
         }
+        const questions = quiz.questions;
 
-        // 해당 퀴즈의 문제들 가져오기
-        const questions = quizData.question.filter(q => q.quiz_id === quizId);
-        
-        // URL의 count 파라미터가 변경되었거나 새로운 퀴즈를 시작할 경우 세션 초기화
-        if (!req.session.quizId || 
-            req.session.quizId !== quizId || 
-            req.session.totalQuestions !== count) {
-            
+        // 세션 초기화 (count 파라미터 변경, 새로운 퀴즈 시작 시)
+        if (!req.session.quizId || req.session.quizId !== quizId || req.session.totalQuestions !== count) {
             req.session.quizId = quizId;
             req.session.currentQuestion = 1;
             req.session.totalQuestions = Math.min(count, questions.length);
@@ -88,8 +76,6 @@ router.get('/play/:id', (req, res) => {
         }
 
         const currentQuestionNum = req.session.currentQuestion;
-        
-        // 퀴즈 완료 체크
         if (currentQuestionNum > req.session.totalQuestions) {
             return res.redirect('/quiz/final-result');
         }
@@ -98,8 +84,7 @@ router.get('/play/:id', (req, res) => {
         if (!currentQuestion) {
             throw new Error('문제를 찾을 수 없습니다.');
         }
-        
-        // 퀴즈 데이터 준비
+
         const quizPlayData = {
             quizId: quizId,
             questionImage: "/rogo.png",
@@ -109,21 +94,13 @@ router.get('/play/:id', (req, res) => {
             questionType: currentQuestion.question_type
         };
 
-        // 객관식 문제인 경우 선택지 추가 및 무작위 섞기
         if (currentQuestion.question_type === 'choice') {
-            let options = quizData.question_option
-                .filter(opt => opt.question_id === currentQuestion.id);
-            
-            // 선택지 무작위 섞기
+            let options = currentQuestion.options || [];
             options = options.sort(() => Math.random() - 0.5);
-            
             quizPlayData.options = options;
-            
-            // 객관식 템플릿 렌더링
             return res.render('quiz/choice-play', quizPlayData);
         }
-        
-        // 주관식 템플릿 렌더링
+
         res.render('quiz/play', quizPlayData);
     } catch (error) {
         console.error('퀴즈 플레이 페이지 에러:', error);
@@ -132,19 +109,19 @@ router.get('/play/:id', (req, res) => {
 });
 
 // 퀴즈 정답 제출 처리
-router.post('/submit', (req, res) => {
+router.post('/submit', async (req, res) => {
     try {
         const { answer, questionType } = req.body;
         const currentQuestionNum = req.session.currentQuestion || 1;
         const quizId = req.session.quizId;
 
-        // 현재 문제 정보 가져오기
-        const questions = quizData.question.filter(q => q.quiz_id === quizId);
-        if (!questions || questions.length === 0) {
+        // DB에서 퀴즈 및 문제 불러오기
+        const quiz = await Quiz.getById(quizId);
+        if (!quiz || !quiz.questions || quiz.questions.length === 0) {
             throw new Error('퀴즈를 찾을 수 없습니다.');
         }
 
-        const currentQuestion = questions[currentQuestionNum - 1];
+        const currentQuestion = quiz.questions[currentQuestionNum - 1];
         if (!currentQuestion || currentQuestion.question_type !== questionType) {
             throw new Error('문제를 찾을 수 없습니다.');
         }
@@ -154,15 +131,11 @@ router.post('/submit', (req, res) => {
 
         if (questionType === 'choice') {
             // 객관식 답안 처리
-            const correctOption = quizData.question_option.find(opt => 
-                opt.question_id === currentQuestion.id && 
-                opt.is_correct
-            );
-
-            isCorrect = answer === correctOption.id.toString();
+            const correctOption = (currentQuestion.options || []).find(opt => opt.is_correct);
+            isCorrect = answer === String(correctOption.id);
             responseData = {
                 isCorrect,
-                correctAnswer: correctOption.id.toString()
+                correctAnswer: String(correctOption.id)
             };
         } else {
             // 주관식 답안 처리
@@ -216,18 +189,39 @@ router.get('/result/:id', (req, res) => {
 });
 
 // 최종 결과 페이지
-router.get('/final-result', (req, res) => {
-    // 실제로는 세션이나 DB에서 사용자의 퀴즈 결과를 가져와야 함
-    const sampleResults = {
-        correctCount: 6,
-        totalQuizzes: 10,
-        percentage: 30
-    };
-    
-    res.render('quiz/final-result', {
-        user: req.session.user,
-        results: sampleResults
-    });
+router.get('/final-result', async (req, res) => {
+    try {
+        const user = req.session.user;
+        const quizId = req.session.quizId;
+        const results = req.session.results || [];
+        const totalQuestions = req.session.totalQuestions || results.length;
+        const correctCount = results.filter(r => r.isCorrect).length;
+
+        // DB에 결과 저장 (로그인한 경우만)
+        if (user && quizId) {
+            await Quiz.saveResult({
+                user_id: user.id,
+                quiz_id: quizId,
+                score: correctCount,
+                total_questions: totalQuestions
+            });
+        }
+
+        // 상위 % 계산 예시 (실제 통계는 추가 쿼리 필요)
+        const percentage = Math.round((correctCount / totalQuestions) * 100);
+
+        res.render('quiz/final-result', {
+            user: user,
+            results: {
+                correctCount,
+                totalQuizzes: totalQuestions,
+                percentage
+            }
+        });
+    } catch (error) {
+        console.error('최종 결과 처리 에러:', error);
+        res.redirect('/');
+    }
 });
 
 module.exports = router; 
