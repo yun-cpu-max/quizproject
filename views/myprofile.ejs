@@ -44,18 +44,47 @@
                         <h3 class="card-title mb-0">내 정보</h3>
                     </div>
                     <div class="card-body">
-                        <div class="profile-info">
-                            <div class="mb-3">
-                                <label class="form-label">아이디</label>
-                                <p class="form-control-static"><%= user.username %></p>
+                        <% if (user) { %>
+                            <div class="mb-4">
+                                <h4>기본 정보</h4>
+                                <table class="table">
+                                    <tr>
+                                        <th>아이디</th>
+                                        <td><%= user.username %></td>
+                                    </tr>
+                                    <tr>
+                                        <th>이메일</th>
+                                        <td><%= user.email %></td>
+                                    </tr>
+                                    <tr>
+                                        <th>가입일</th>
+                                        <td><%= new Date(user.created_at).toLocaleDateString('ko-KR') %></td>
+                                    </tr>
+                                    <tr>
+                                        <th>계정 상태</th>
+                                        <td><%= user.is_active ? '활성화' : '비활성화' %></td>
+                                    </tr>
+                                </table>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">가입일</label>
-                                <p class="form-control-static">2025년 3월 31일</p>
+                            
+                            <div class="mb-4">
+                                <h4>활동 정보</h4>
+                                <table class="table">
+                                    <tr>
+                                        <th>퀴즈 참여 횟수</th>
+                                        <td>0회</td>
+                                    </tr>
+                                    <tr>
+                                        <th>평균 점수</th>
+                                        <td>0점</td>
+                                    </tr>
+                                </table>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">이메일</label>
-                                <p class="form-control-static">example@email.com</p>
+
+                            
+                        <% } else { %>
+                            <div class="alert alert-warning">
+                                로그인이 필요합니다.
                             </div>
                         </div>
                         <div class="mt-4">

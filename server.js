@@ -3,9 +3,27 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
+const mysql = require('mysql2');
 
 const app = express();
 const PORT = 3000;
+
+// MySQL 연결 설정
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',        // MySQL 사용자 이름
+    password: 'mysql@24!',        // MySQL 비밀번호
+    database: 'quiz_db'  // 데이터베이스 이름
+});
+
+// MySQL 연결
+db.connect((err) => {
+    if (err) {
+        console.error('MySQL 연결 실패:', err);
+        return;
+    }
+    console.log('MySQL 연결 성공');
+});
 
 // EJS 설정
 app.set("view engine", "ejs");
@@ -17,13 +35,14 @@ app.use(bodyParser.json()); // JSON 파싱 미들웨어 추가
 app.use(session({
     secret: 'my-secret-key',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: {
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
 
-// 임시 사용자 데이터
-const users = [
-    { username: 'test', password: 'test123' }
-];
+
 
 // 샘플 데이터 (Machugi.io처럼 이미지 목록을 표시)
 const images = [
@@ -55,22 +74,29 @@ app.get('/login', (req, res) => {
 // 로그인 처리
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    console.log('로그인 시도:', { username, password }); // 디버깅용 로그
     
-    const user = users.find(u => u.username === username && u.password === password);
-    console.log('찾은 사용자:', user); // 디버깅용 로그
-    
-    if (user) {
-        req.session.user = user;
-        console.log('로그인 성공:', user); // 디버깅용 로그
-        res.redirect('/');
-    } else {
-        console.log('로그인 실패'); // 디버깅용 로그
-        res.render('login', { 
-            error: '아이디 또는 비밀번호가 잘못되었습니다.',
-            user: req.session.user 
-        });
-    }
+    // MySQL에서 사용자 조회
+    const query = 'SELECT * FROM user WHERE username = ? AND password = ? AND is_active = TRUE';
+    db.query(query, [username, password], (err, results) => {
+        if (err) {
+            console.error('로그인 쿼리 실패:', err);
+            return res.render('login', { error: '로그인 처리 중 오류가 발생했습니다.' });
+        }
+
+        if (results.length > 0) {
+            req.session.user = {
+                id: results[0].id,
+                username: results[0].username,
+                email: results[0].email,
+                role: results[0].role,
+                is_active: results[0].is_active,
+                created_at: results[0].created_at
+            };
+            res.redirect('/');
+        } else {
+            res.render('login', { error: '아이디 또는 비밀번호가 잘못되었습니다.' });
+        }
+    });
 });
 
 // 로그아웃 처리
@@ -81,7 +107,7 @@ app.get('/logout', (req, res) => {
 
 // 회원가입 페이지 렌더링
 app.get('/signup', (req, res) => {
-    res.render('signup', { user: req.session.user });
+    res.render('signup', { error: null });
 });
 
 // 공지사항 페이지 렌더링
@@ -95,6 +121,35 @@ app.get('/myprofile', (req, res) => {
         return res.redirect('/login');
     }
     res.render('myprofile', { user: req.session.user });
+});
+
+// 회원가입 처리
+app.post('/signup', (req, res) => {
+    const { username, email, password } = req.body;
+    
+    // 중복 사용자 확인
+    const checkQuery = 'SELECT * FROM user WHERE username = ? OR email = ?';
+    db.query(checkQuery, [username, email], (err, results) => {
+        if (err) {
+            console.error('중복 확인 쿼리 실패:', err);
+            return res.render('signup', { error: '회원가입 처리 중 오류가 발생했습니다.' });
+        }
+
+        if (results.length > 0) {
+            return res.render('signup', { error: '이미 존재하는 아이디 또는 이메일입니다.' });
+        }
+
+        // 새 사용자 추가
+        const insertQuery = 'INSERT INTO user (username, email, password, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NOW(), NOW())';
+        db.query(insertQuery, [username, email, password, 'user'], (err, results) => {
+            if (err) {
+                console.error('회원가입 쿼리 실패:', err);
+                return res.render('signup', { error: '회원가입 처리 중 오류가 발생했습니다.' });
+            }
+
+            res.redirect('/login');
+        });
+    });
 });
 
 // 퀴즈 라우터 추가
