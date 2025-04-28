@@ -54,7 +54,23 @@
                     <div class="alert alert-danger text-center"><%= error %></div>
                 <% } %>
                 <h2 class="quiz-title mb-4 text-center">퀴즈 생성</h2>
-                <form id="quizForm" action="/quiz/create" method="POST">
+                <form id="quizForm" action="/quiz/create" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">퀴즈 썸네일</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="thumbnailType" id="defaultThumb" value="default" checked onchange="toggleThumbnailInput()">
+                                <label class="form-check-label" for="defaultThumb">기본 썸네일 사용</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="thumbnailType" id="customThumb" value="custom" onchange="toggleThumbnailInput()">
+                                <label class="form-check-label" for="customThumb">이미지 직접 업로드</label>
+                            </div>
+                        </div>
+                        <div id="thumbnailInput" style="display:none;" class="mt-2">
+                            <input type="file" class="form-control" name="thumbnailImage" accept="image/*">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="title" class="form-label">퀴즈 제목</label>
                         <input type="text" class="form-control" id="title" name="title" required>
@@ -149,7 +165,7 @@
                                             <input class="form-check-input mt-0" type="radio" name="questions[${qIdx}][correct]" value="1" required>
                                             <span class="ms-2">정답</span>
                                         </span>
-                                        <input type="text" class="form-control" name="questions[${qIdx}][option1]" placeholder="선택지 1" required>
+                                        <input type="text" class="form-control" name="questions[${qIdx}][option1]" placeholder="선택지 1" required onchange="checkDuplicateOptions(${qIdx})">
                                     </div>
                                 </div>
                                 <div class="col-12 mb-2">
@@ -158,7 +174,7 @@
                                             <input class="form-check-input mt-0" type="radio" name="questions[${qIdx}][correct]" value="2" required>
                                             <span class="ms-2">정답</span>
                                         </span>
-                                        <input type="text" class="form-control" name="questions[${qIdx}][option2]" placeholder="선택지 2" required>
+                                        <input type="text" class="form-control" name="questions[${qIdx}][option2]" placeholder="선택지 2" required onchange="checkDuplicateOptions(${qIdx})">
                                     </div>
                                 </div>
                                 <div class="col-12 mb-2">
@@ -167,7 +183,7 @@
                                             <input class="form-check-input mt-0" type="radio" name="questions[${qIdx}][correct]" value="3" required>
                                             <span class="ms-2">정답</span>
                                         </span>
-                                        <input type="text" class="form-control" name="questions[${qIdx}][option3]" placeholder="선택지 3" required>
+                                        <input type="text" class="form-control" name="questions[${qIdx}][option3]" placeholder="선택지 3" required onchange="checkDuplicateOptions(${qIdx})">
                                     </div>
                                 </div>
                                 <div class="col-12 mb-2">
@@ -176,7 +192,7 @@
                                             <input class="form-check-input mt-0" type="radio" name="questions[${qIdx}][correct]" value="4" required>
                                             <span class="ms-2">정답</span>
                                         </span>
-                                        <input type="text" class="form-control" name="questions[${qIdx}][option4]" placeholder="선택지 4" required>
+                                        <input type="text" class="form-control" name="questions[${qIdx}][option4]" placeholder="선택지 4" required onchange="checkDuplicateOptions(${qIdx})">
                                     </div>
                                 </div>
                             </div>
@@ -242,8 +258,55 @@
         if (questionCount < minQuestions) {
             alert('최소 10문제 이상 등록해야 합니다.');
             e.preventDefault();
+            return;
+        }
+
+        // 객관식인 경우에만 중복 체크
+        if (currentType === 'choice') {
+            for (let i = 1; i <= questionCount; i++) {
+                const options = [
+                    document.querySelector(`input[name="questions[${i}][option1]"]`).value.trim(),
+                    document.querySelector(`input[name="questions[${i}][option2]"]`).value.trim(),
+                    document.querySelector(`input[name="questions[${i}][option3]"]`).value.trim(),
+                    document.querySelector(`input[name="questions[${i}][option4]"]`).value.trim()
+                ];
+
+                const uniqueOptions = new Set(options);
+                if (options.length !== uniqueOptions.size) {
+                    alert(`문제 ${i}번의 선택지가 중복되었습니다. 확인해주세요.`);
+                    e.preventDefault();
+                    return;
+                }
+            }
         }
     });
+
+    // 선택지 중복 체크 함수 추가
+    function checkDuplicateOptions(qIdx) {
+        const options = [
+            document.querySelector(`input[name="questions[${qIdx}][option1]"]`),
+            document.querySelector(`input[name="questions[${qIdx}][option2]"]`),
+            document.querySelector(`input[name="questions[${qIdx}][option3]"]`),
+            document.querySelector(`input[name="questions[${qIdx}][option4]"]`)
+        ];
+
+        const values = options.map(opt => opt?.value?.trim()).filter(val => val);
+        const uniqueValues = new Set(values);
+
+        if (values.length !== uniqueValues.size) {
+            alert('선택지는 중복될 수 없습니다. 다른 텍스트를 입력해주세요.');
+            // 마지막으로 입력된 선택지 초기화
+            const lastChangedOption = options.find(opt => document.activeElement === opt);
+            if (lastChangedOption) {
+                lastChangedOption.value = '';
+            }
+        }
+    }
+
+    function toggleThumbnailInput() {
+        const custom = document.getElementById('customThumb').checked;
+        document.getElementById('thumbnailInput').style.display = custom ? 'block' : 'none';
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
