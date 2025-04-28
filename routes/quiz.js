@@ -3,6 +3,12 @@ const router = express.Router();
 const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
 const testQuizData = require('../data/testQuizData');  // 테스트용 퀴즈 데이터
 const db = require('../db'); // DB 연결 객체 불러오기
+const path = require('path');
+const multer = require('multer');
+const upload = multer({
+    dest: path.join(__dirname, '../public/uploads/'),
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -47,17 +53,25 @@ router.get('/create', (req, res) => {
 });
 
 // 퀴즈 생성 처리
-router.post('/create', (req, res) => {
+router.post('/create', upload.single('thumbnailImage'), (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
 
-    const { title, description, category, questionType, questions } = req.body;
+    const { title, description, category, questionType, questions, thumbnailType } = req.body;
     const createdBy = req.session.user.id;
 
-    // 1. 퀴즈 저장
-    const quizQuery = 'INSERT INTO quiz (category, title, description) VALUES (?, ?, ?)';
-    db.query(quizQuery, [category, title, description], (err, quizResult) => {
+    // 썸네일 경로 결정
+    let thumbnailUrl = '';
+    if (thumbnailType === 'default') {
+        thumbnailUrl = '/rogo.png';
+    } else if (thumbnailType === 'custom' && req.file) {
+        thumbnailUrl = '/uploads/' + req.file.filename;
+    }
+
+    // 1. 퀴즈 저장 (thumbnail_url 추가)
+    const quizQuery = 'INSERT INTO quiz (category, title, description, thumbnail_url) VALUES (?, ?, ?, ?)';
+    db.query(quizQuery, [category, title, description, thumbnailUrl], (err, quizResult) => {
         if (err) {
             console.error('퀴즈 저장 실패:', err);
             return res.render('quiz/create', { user: req.session.user, error: '퀴즈 저장 중 오류가 발생했습니다.', success: null });
