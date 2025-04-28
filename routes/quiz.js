@@ -81,6 +81,7 @@ router.get('/play/:id', async (req, res) => {
             }
             req.session.questionOrder = questionIds.slice(0, req.session.totalQuestions);
             req.session.results = [];
+            req.session.resultSaved = false; // 결과 저장 플래그 초기화
         }
 
         const currentQuestionNum = req.session.currentQuestion;
@@ -125,6 +126,10 @@ router.post('/submit', async (req, res) => {
         const currentQuestionNum = req.session.currentQuestion || 1;
         const quizId = req.session.quizId;
         const questionOrder = req.session.questionOrder;
+        const user = req.session.user;
+
+        // 디버깅: 세션 상태 로그
+        console.log('[SUBMIT] resultSaved:', req.session.resultSaved, '| currentQuestion:', currentQuestionNum, '| totalQuestions:', req.session.totalQuestions);
 
         // DB에서 퀴즈 및 문제 불러오기
         const quiz = await Quiz.getById(quizId);
@@ -169,6 +174,18 @@ router.post('/submit', async (req, res) => {
             isCorrect
         });
 
+        // 마지막 문제 제출 시 DB에 결과 저장 (로그인한 경우만, 중복 방지)
+        if (user && quizId && currentQuestionNum === req.session.totalQuestions && !req.session.resultSaved) {
+            const correctCount = req.session.results.filter(r => r.isCorrect).length;
+            await Quiz.saveResult({
+                user_id: user.id,
+                quiz_id: quizId,
+                score: correctCount,
+                total_questions: req.session.totalQuestions
+            });
+            req.session.resultSaved = true; // 결과 저장 플래그
+        }
+
         // 다음 문제로 이동
         req.session.currentQuestion = currentQuestionNum + 1;
 
@@ -210,15 +227,8 @@ router.get('/final-result', async (req, res) => {
         const totalQuestions = req.session.totalQuestions || results.length;
         const correctCount = results.filter(r => r.isCorrect).length;
 
-        // DB에 결과 저장 (로그인한 경우만)
-        if (user && quizId) {
-            await Quiz.saveResult({
-                user_id: user.id,
-                quiz_id: quizId,
-                score: correctCount,
-                total_questions: totalQuestions
-            });
-        }
+        // 디버깅: 세션 상태 로그
+        console.log('[FINAL-RESULT] resultSaved:', req.session.resultSaved, '| results.length:', results.length, '| correctCount:', correctCount);
 
         // 상위 % 계산 예시 (실제 통계는 추가 쿼리 필요)
         const percentage = Math.round((correctCount / totalQuestions) * 100);
@@ -236,6 +246,13 @@ router.get('/final-result', async (req, res) => {
         console.error('최종 결과 처리 에러:', error);
         res.redirect('/');
     }
+});
+
+// 대시보드(전체 통계) 라우트
+router.get('/dashboard/:quizId', async (req, res) => {
+    const quizId = parseInt(req.params.quizId);
+    const stats = await Quiz.getStatsByQuizId(quizId);
+    res.render('quiz/dashboard', { stats, quizId });
 });
 
 module.exports = router;

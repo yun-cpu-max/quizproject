@@ -79,6 +79,17 @@ class Quiz {
         await db.disconnect();
         return result;
     }
+
+    static async getStatsByQuizId(quizId) {
+        const db = new DBConnection(dbConfig);
+        await db.connect();
+        const stats = await db.query(
+            'SELECT COUNT(*) AS total_participants, AVG(score) AS avg_score, MAX(score) AS max_score, MIN(score) AS min_score FROM quiz_results WHERE quiz_id = ?',
+            [quizId]
+        );
+        await db.disconnect();
+        return stats[0];
+    }
 }
 
 class Question {
