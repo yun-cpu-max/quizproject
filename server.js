@@ -4,6 +4,7 @@ const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 const db = require('./db');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = 3000;
@@ -304,6 +305,7 @@ app.post('/change-password', (req, res) => {
 
 // 퀴즈 라우터 추가
 app.use('/quiz', quizRouter);
+app.use('/admin', adminRouter);
 
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
