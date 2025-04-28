@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const quizData = require('../data/quizData');  // 퀴즈 데이터 가져오기
 const testQuizData = require('../data/testQuizData');  // 테스트용 퀴즈 데이터
+const db = require('../db'); // DB 연결 객체 불러오기
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -42,7 +43,7 @@ router.get('/create', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-    res.render('quiz/create', { user: req.session.user });
+    res.render('quiz/create', { user: req.session.user, success: null, error: null });
 });
 
 // 퀴즈 생성 처리
@@ -50,10 +51,77 @@ router.post('/create', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-    
-    // 퀴즈 생성 로직 구현
-    // req.body에서 퀴즈 데이터 추출
-    res.redirect('/quiz');
+
+    const { title, description, category, questionType, questions } = req.body;
+    const createdBy = req.session.user.id;
+
+    // 1. 퀴즈 저장
+    const quizQuery = 'INSERT INTO quiz (category, title, description) VALUES (?, ?, ?)';
+    db.query(quizQuery, [category, title, description], (err, quizResult) => {
+        if (err) {
+            console.error('퀴즈 저장 실패:', err);
+            return res.render('quiz/create', { user: req.session.user, error: '퀴즈 저장 중 오류가 발생했습니다.', success: null });
+        }
+        const quizId = quizResult.insertId;
+
+        // 2. 문제 저장 (questions는 객체 배열)
+        const questionArr = Object.values(questions);
+        let totalQuestions = questionArr.length;
+        let savedQuestions = 0;
+        let hasError = false;
+
+        questionArr.forEach((q, idx) => {
+            // 문제 유형 결정
+            let dbQuestionType = questionType === 'choice' ? 'multiple_choice' : 'short_answer';
+            const questionQuery = 'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by) VALUES (?, ?, ?, ?, ?)';
+            let correctAnswer = questionType === 'choice' ? '' : q.answer;
+            db.query(questionQuery, [quizId, q.text, dbQuestionType, correctAnswer, createdBy], (err, questionResult) => {
+                if (err) {
+                    hasError = true;
+                    console.error('문제 저장 실패:', err);
+                    if (!hasError) {
+                        hasError = true;
+                        return res.render('quiz/create', { user: req.session.user, error: '문제 저장 중 오류가 발생했습니다.', success: null });
+                    }
+                }
+                const questionId = questionResult.insertId;
+
+                // 3. 객관식일 경우 선택지 저장
+                if (questionType === 'choice') {
+                    const options = [q.option1, q.option2, q.option3, q.option4];
+                    const correctIdx = q.correct;
+                    let savedOptions = 0;
+                    options.forEach((opt, i) => {
+                        const isCorrect = (correctIdx == (i+1)) ? 1 : 0;
+                        const optionQuery = 'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)';
+                        db.query(optionQuery, [questionId, opt, isCorrect, i+1], (err) => {
+                            if (err) {
+                                hasError = true;
+                                console.error('선택지 저장 실패:', err);
+                                if (!hasError) {
+                                    hasError = true;
+                                    return res.render('quiz/create', { user: req.session.user, error: '선택지 저장 중 오류가 발생했습니다.', success: null });
+                                }
+                            }
+                            savedOptions++;
+                            if (savedOptions === 4) {
+                                savedQuestions++;
+                                if (savedQuestions === totalQuestions && !hasError) {
+                                    return res.render('quiz/create', { user: req.session.user, success: '퀴즈가 성공적으로 등록되었습니다!', error: null });
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    // 주관식일 경우
+                    savedQuestions++;
+                    if (savedQuestions === totalQuestions && !hasError) {
+                        return res.render('quiz/create', { user: req.session.user, success: '퀴즈가 성공적으로 등록되었습니다!', error: null });
+                    }
+                }
+            });
+        });
+    });
 });
 
 // 퀴즈 플레이 페이지
