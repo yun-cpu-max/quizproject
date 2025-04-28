@@ -59,6 +59,7 @@ router.get('/play/:id', async (req, res) => {
     try {
         const quizId = parseInt(req.params.id);
         const count = parseInt(req.query.count) || 10;
+        const reset = req.query.reset === '1';
 
         // DB에서 퀴즈 정보 및 문제, 선택지 불러오기
         const quiz = await Quiz.getById(quizId);
@@ -67,11 +68,18 @@ router.get('/play/:id', async (req, res) => {
         }
         const questions = quiz.questions;
 
-        // 세션 초기화 (count 파라미터 변경, 새로운 퀴즈 시작 시)
-        if (!req.session.quizId || req.session.quizId !== quizId || req.session.totalQuestions !== count) {
+        // reset 파라미터가 있거나, 기존 조건에 해당하면 세션 초기화
+        if (reset || !req.session.quizId || req.session.quizId !== quizId || !req.session.questionOrder || req.session.totalQuestions !== count) {
             req.session.quizId = quizId;
             req.session.currentQuestion = 1;
             req.session.totalQuestions = Math.min(count, questions.length);
+            // 문제 id 배열을 랜덤하게 섞어서 세션에 저장
+            const questionIds = questions.map(q => q.id);
+            for (let i = questionIds.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
+            }
+            req.session.questionOrder = questionIds.slice(0, req.session.totalQuestions);
             req.session.results = [];
         }
 
@@ -80,7 +88,9 @@ router.get('/play/:id', async (req, res) => {
             return res.redirect('/quiz/final-result');
         }
 
-        const currentQuestion = questions[currentQuestionNum - 1];
+        // 세션의 랜덤 문제 id 배열에서 현재 문제 id를 가져옴
+        const currentQuestionId = req.session.questionOrder[currentQuestionNum - 1];
+        const currentQuestion = questions.find(q => q.id === currentQuestionId);
         if (!currentQuestion) {
             throw new Error('문제를 찾을 수 없습니다.');
         }
@@ -114,6 +124,7 @@ router.post('/submit', async (req, res) => {
         const { answer, questionType } = req.body;
         const currentQuestionNum = req.session.currentQuestion || 1;
         const quizId = req.session.quizId;
+        const questionOrder = req.session.questionOrder;
 
         // DB에서 퀴즈 및 문제 불러오기
         const quiz = await Quiz.getById(quizId);
@@ -121,7 +132,9 @@ router.post('/submit', async (req, res) => {
             throw new Error('퀴즈를 찾을 수 없습니다.');
         }
 
-        const currentQuestion = quiz.questions[currentQuestionNum - 1];
+        // 세션의 랜덤 문제 id 배열에서 현재 문제 id를 가져옴
+        const currentQuestionId = questionOrder[currentQuestionNum - 1];
+        const currentQuestion = quiz.questions.find(q => q.id === currentQuestionId);
         if (!currentQuestion || currentQuestion.question_type !== questionType) {
             throw new Error('문제를 찾을 수 없습니다.');
         }
@@ -216,7 +229,8 @@ router.get('/final-result', async (req, res) => {
                 correctCount,
                 totalQuizzes: totalQuestions,
                 percentage
-            }
+            },
+            quizId
         });
     } catch (error) {
         console.error('최종 결과 처리 에러:', error);

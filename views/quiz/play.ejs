@@ -210,6 +210,9 @@
             const answerFeedback = document.getElementById('answer-feedback');
             const nextButton = document.getElementById('next-button');
 
+            // 입력창 자동 포커스
+            answerInput.focus();
+
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 submitAnswer();

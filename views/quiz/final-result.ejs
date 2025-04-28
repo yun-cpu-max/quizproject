@@ -132,7 +132,8 @@
         <img src="/images/result-character.png" alt="결과 캐릭터" class="result-image">
         
         <div class="result-count">
-            <%= results.correctCount %>개 맞히셨습니다
+            <%= results.correctCount %> / <%= results.totalQuizzes %>개 정답<br>
+            정답률: <%= results.percentage %>%
         </div>
 
         <div class="stats-container">
@@ -146,8 +147,8 @@
         </div>
 
         <div class="action-buttons">
-            <a href="/quiz/play/1" class="action-button retry-button">다시 풀기</a>
-            <a href="/quiz" class="action-button next-button">다른 퀴즈</a>
+            <a href="/quiz/list/<%= quizId %>" class="action-button retry-button">다시 풀기</a>
+            <!-- <a href="/quiz" class="action-button next-button">다른 퀴즈 목록</a> -->
             <a href="/" class="action-button home-button">홈으로</a>
         </div>
     </div>
