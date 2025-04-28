@@ -232,12 +232,15 @@
 
                 try {
                     console.log('Submitting answer:', answer);
-                    const response = await fetch('/quiz/submit/<%= quizId %>', {
+                    const response = await fetch('/quiz/submit', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ answer: answer })
+                        body: JSON.stringify({ 
+                            answer: answer,
+                            questionType: '<%= questionType %>'
+                        })
                     });
 
                     if (!response.ok) {
@@ -276,8 +279,7 @@
             }
 
             function goToNextQuestion() {
-                const nextQuizId = parseInt('<%= quizId %>') + 1;
-                window.location.href = `/quiz/play/${nextQuizId}?count=<%= totalQuestions %>`;
+                window.location.href = `/quiz/play/<%= quizId %>?count=<%= totalQuestions %>`;
             }
 
             nextButton.addEventListener('click', goToNextQuestion);
