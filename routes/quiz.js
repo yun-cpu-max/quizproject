@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { Quiz } = require('../models/Quiz');
+const db = require('../db'); // DB 연결 객체 불러오기
+const path = require('path');
+const multer = require('multer');
+const upload = multer({
+    dest: path.join(__dirname, '../public/uploads/'),
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -35,18 +42,37 @@ router.get('/create', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-    res.render('quiz/create', { user: req.session.user });
+    res.render('quiz/create', { user: req.session.user, success: null, error: null });
 });
 
 // 퀴즈 생성 처리
-router.post('/create', (req, res) => {
+router.post('/create', upload.single('thumbnailImage'), (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-    
-    // 퀴즈 생성 로직 구현
-    // req.body에서 퀴즈 데이터 추출
-    res.redirect('/quiz');
+
+    const { title, description, category, questionType, questions, thumbnailType } = req.body;
+    // 썸네일 경로 결정
+    let thumbnailUrl = '';
+    if (thumbnailType === 'default') {
+        thumbnailUrl = '/rogo.png';
+    } else if (thumbnailType === 'custom' && req.file) {
+        thumbnailUrl = '/uploads/' + req.file.filename;
+    }
+
+    // questions를 배열로 변환 후 null 값 제거
+    let questionsArr = Object.values(questions).filter(q => q);
+    const questionsJson = JSON.stringify(questionsArr);
+
+    // pending_quiz 테이블에 저장
+    db.query('INSERT INTO pending_quiz (category, title, description, thumbnail_url, questions) VALUES (?, ?, ?, ?, ?)',
+        [category, title, description, thumbnailUrl, questionsJson], (err) => {
+        if (err) {
+            console.error('퀴즈 신청 저장 실패:', err);
+            return res.render('quiz/create', { user: req.session.user, error: '퀴즈 신청 저장 중 오류가 발생했습니다.', success: null });
+        }
+        return res.render('quiz/create', { user: req.session.user, success: '퀴즈 신청성공 검토후 등록', error: null });
+    });
 });
 
 // 퀴즈 플레이 페이지

@@ -37,6 +37,9 @@
                 <div class="d-flex">
                     <% if (user) { %>
                         <a href="/myprofile" class="btn btn-outline-light me-2">내정보</a>
+                        <% if (user.role === 'admin') { %>
+                        <a href="/admin" class="btn btn-warning me-2">관리자</a>
+                        <% } %>
                         <a href="/logout" class="btn btn-outline-light">로그아웃</a>
                     <% } else { %>
                         <a href="/login" class="btn btn-outline-light me-2">로그인</a>
