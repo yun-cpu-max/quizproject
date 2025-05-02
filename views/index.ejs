@@ -57,21 +57,36 @@
             <button type="submit" class="search-btn btn btn-primary">검색</button>
         </div>
     </form>
-
+    <% if (!images || images.length === 0) { %>
+        <div style="color:white; text-align:center; margin-top:40px;">퀴즈가 없습니다.</div>
+    <% } %>
     <div class="image-grid">
-        <% images.forEach(img => { %>
-            <a href="/quiz/list/<%= img.id %>" class="image-card-link" style="text-decoration: none; color: inherit;">
-                <div class="image-card">
-                    <div class="image-container">
-                        <img src="<%= img.thumbnail %>" alt="<%= img.title %>" class="card-img-top" onerror="this.src='/rogo.png'">
+        <% if (images && images.length > 0) { %>
+            <% images.forEach(img => { %>
+                <a href="/quiz/list/<%= img.id %>" class="image-card-link" style="text-decoration: none; color: inherit;">
+                    <div class="image-card">
+                        <div class="image-container">
+                            <img src="/rogo.png" alt="<%= img.title %>" class="card-img-top">
+                        </div>
+                        <div class="image-info">
+                            <h3 class="card-title"><%= img.title %></h3>
+                            <p class="card-text"><%= img.description %></p>
+                        </div>
                     </div>
-                    <div class="image-info">
-                        <h3 class="card-title"><%= img.title %></h3>
-                        <p class="card-text"><%= img.description %></p>
-                    </div>
+                </a>
+            <% }) %>
+        <% } else { %>
+            <!-- 퀴즈가 없을 때 기본 이미지와 안내 메시지 -->
+            <div class="image-card" style="margin: 40px auto; max-width: 300px;">
+                <div class="image-container">
+                    <img src="/rogo.png" alt="기본 이미지" class="card-img-top">
                 </div>
-            </a>
-        <% }) %>
+                <div class="image-info">
+                    <h3 class="card-title">퀴즈가 없습니다</h3>
+                    <p class="card-text">새로운 퀴즈를 추가해보세요!</p>
+                </div>
+            </div>
+        <% } %>
     </div>
     
 

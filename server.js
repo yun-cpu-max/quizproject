@@ -5,6 +5,7 @@ const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 const db = require('./db');
 const adminRouter = require('./routes/admin');
+const { Quiz } = require('./models/Quiz'); // Quiz 모델 import
 
 const app = express();
 const PORT = 3000;
@@ -45,16 +46,19 @@ const images = [
 ];
 
 // 메인 페이지 라우트
-app.get("/", (req, res) => {
-  res.render("index", { images: quizData.quiz, user: req.session.user });
+app.get("/", async (req, res) => {
+  const quizzes = await Quiz.getAll();
+  console.log('퀴즈 목록:', quizzes);
+  res.render("index", { images: quizzes, user: req.session.user });
 });
 
 // 검색 기능 (사용자가 검색어 입력하면 필터링)
-app.post("/search", (req, res) => {
+app.post("/search", async (req, res) => {
   const searchTerm = req.body.search.toLowerCase();
-  const filteredImages = quizData.quiz.filter(img =>
+  const quizzes = await Quiz.getAll();
+  const filteredImages = quizzes.filter(img =>
     img.title.toLowerCase().includes(searchTerm) || 
-    img.description.toLowerCase().includes(searchTerm)
+    (img.description || '').toLowerCase().includes(searchTerm)
   );
   res.render("index", { images: filteredImages, user: req.session.user });
 });
