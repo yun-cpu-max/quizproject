@@ -7,20 +7,72 @@ router.get('/', async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.redirect('/');
     }
+
+    const itemsPerPage = 10;
+    const userPage = parseInt(req.query.userPage) || 1;
+    const quizPage = parseInt(req.query.quizPage) || 1;
+
     // pending_quiz 테이블에서 대기 퀴즈 전체 조회
     db.query('SELECT * FROM pending_quiz', (err, pendingQuizzes) => {
         if (err) return res.send('대기 퀴즈 조회 오류');
-        // 모든 유저 정보
-        db.query('SELECT id, username, email, role FROM user', (err, users) => {
+
+        // 퀴즈 데이터 파싱
+        pendingQuizzes = pendingQuizzes.map(quiz => {
+            try {
+                // MySQL의 JSON 타입이 이미 파싱되어 있는 경우를 처리
+                if (typeof quiz.questions === 'string') {
+                    quiz.questions = JSON.parse(quiz.questions);
+                }
+                // questions가 undefined인 경우 빈 배열로 초기화
+                if (!quiz.questions) {
+                    quiz.questions = [];
+                }
+            } catch (e) {
+                console.error('퀴즈 데이터 파싱 오류:', e);
+                quiz.questions = [];
+            }
+            return quiz;
+        });
+
+        // 모든 유저 정보 (페이지네이션 적용)
+        const userOffset = (userPage - 1) * itemsPerPage;
+        db.query('SELECT id, username, email, role FROM user LIMIT ? OFFSET ?', 
+            [itemsPerPage, userOffset], (err, users) => {
             if (err) return res.send('유저 조회 오류');
-            // 모든 퀴즈 정보
-            db.query('SELECT id, title, category FROM quiz', (err, quizzes) => {
-                if (err) return res.send('퀴즈 조회 오류');
-                res.render('admin', {
-                    user: req.session.user,
-                    pendingQuizzes,
-                    users,
-                    quizzes
+
+            // 전체 유저 수 조회
+            db.query('SELECT COUNT(*) as total FROM user', (err, userCountResult) => {
+                if (err) return res.send('유저 수 조회 오류');
+                const totalUsers = userCountResult[0].total;
+                const totalUserPages = Math.ceil(totalUsers / itemsPerPage);
+
+                // 모든 퀴즈 정보 (페이지네이션 적용)
+                const quizOffset = (quizPage - 1) * itemsPerPage;
+                db.query('SELECT id, title, category FROM quiz LIMIT ? OFFSET ?', 
+                    [itemsPerPage, quizOffset], (err, quizzes) => {
+                    if (err) return res.send('퀴즈 조회 오류');
+
+                    // 전체 퀴즈 수 조회
+                    db.query('SELECT COUNT(*) as total FROM quiz', (err, quizCountResult) => {
+                        if (err) return res.send('퀴즈 수 조회 오류');
+                        const totalQuizzes = quizCountResult[0].total;
+                        const totalQuizPages = Math.ceil(totalQuizzes / itemsPerPage);
+
+                        res.render('admin', {
+                            user: req.session.user,
+                            pendingQuizzes,
+                            users,
+                            quizzes,
+                            userPagination: {
+                                currentPage: userPage,
+                                totalPages: totalUserPages
+                            },
+                            quizPagination: {
+                                currentPage: quizPage,
+                                totalPages: totalQuizPages
+                            }
+                        });
+                    });
                 });
             });
         });

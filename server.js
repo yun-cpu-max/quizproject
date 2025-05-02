@@ -105,7 +105,13 @@ app.get('/signup', (req, res) => {
 
 // 공지사항 페이지 렌더링
 app.get('/notice', (req, res) => {
-    res.render('notice', { user: req.session.user });
+    db.query('SELECT * FROM notice ORDER BY created_at DESC', (err, notices) => {
+        if (err) {
+            console.error('공지사항 조회 실패:', err);
+            notices = [];
+        }
+        res.render('notice', { user: req.session.user, notices: notices });
+    });
 });
 
 // 프로필 페이지 렌더링
