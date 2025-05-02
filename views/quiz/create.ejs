@@ -55,6 +55,7 @@
                 <% } %>
                 <h2 class="quiz-title mb-4 text-center">퀴즈 생성</h2>
                 <form id="quizForm" action="/quiz/create" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="created_by" value="<%= user.id %>">
                     <div class="mb-3">
                         <label class="form-label">퀴즈 썸네일</label>
                         <div>

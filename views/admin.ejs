@@ -229,6 +229,11 @@
 
     <div class="section-card notice-section">
         <h4>공지사항 작성</h4>
+        <% if (successMessage) { %>
+            <div class="alert alert-success" role="alert">
+                <%= successMessage %>
+            </div>
+        <% } %>
         <form action="/admin/notice" method="POST">
             <div class="mb-3">
                 <label class="form-label">제목</label>

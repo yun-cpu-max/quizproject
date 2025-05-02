@@ -70,7 +70,9 @@ router.get('/', async (req, res) => {
                             quizPagination: {
                                 currentPage: quizPage,
                                 totalPages: totalQuizPages
-                            }
+                            },
+                            successMessage: req.query.success || null,
+                            error: req.query.error || null
                         });
                     });
                 });
@@ -149,7 +151,11 @@ router.post('/notice', (req, res) => {
     }
     const { title, content } = req.body;
     db.query('INSERT INTO notice (title, content) VALUES (?, ?)', [title, content], (err) => {
-        res.redirect('/admin');
+        if (err) {
+            console.error('공지사항 등록 실패:', err);
+            return res.redirect('/admin?error=공지사항 등록에 실패했습니다.');
+        }
+        res.redirect('/notice?success=공지사항이 성공적으로 등록되었습니다.');
     });
 });
 
