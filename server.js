@@ -4,6 +4,7 @@ const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
 const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 const db = require('./db');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = 3000;
@@ -104,7 +105,13 @@ app.get('/signup', (req, res) => {
 
 // 공지사항 페이지 렌더링
 app.get('/notice', (req, res) => {
-    res.render('notice', { user: req.session.user });
+    db.query('SELECT * FROM notice ORDER BY created_at DESC', (err, notices) => {
+        if (err) {
+            console.error('공지사항 조회 실패:', err);
+            notices = [];
+        }
+        res.render('notice', { user: req.session.user, notices: notices });
+    });
 });
 
 // 프로필 페이지 렌더링
@@ -304,6 +311,7 @@ app.post('/change-password', (req, res) => {
 
 // 퀴즈 라우터 추가
 app.use('/quiz', quizRouter);
+app.use('/admin', adminRouter);
 
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
