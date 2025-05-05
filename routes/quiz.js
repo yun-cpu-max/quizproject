@@ -15,25 +15,24 @@ router.get('/', (req, res) => {
 });
 
 // 특정 퀴즈 상세 페이지
-router.get('/list/:id', async (req, res) => {
-    const quizId = parseInt(req.params.id);
-
-    // DB에서 퀴즈 및 문제 불러오기
-    const quiz = await Quiz.getById(quizId);
-
-    if (!quiz) {
-        return res.redirect('/');
-    }
-
-    // 문제 목록
-    const questions = quiz.questions;
-
-    // 객관식 문제라면 각 문제에 options가 포함되어 있음
-    res.render('quiz/list', { 
-        user: req.session.user,
-        quiz: quiz,
-        questions: questions,
-        isSingleQuiz: true
+router.get('/list/:id', (req, res) => {
+    const quizId = req.params.id;
+    
+    // 조회수 증가
+    db.query('UPDATE quiz SET views = views + 1 WHERE id = ?', [quizId], (err) => {
+        if (err) {
+            console.error('조회수 업데이트 실패:', err);
+        }
+        
+        // 퀴즈 정보 조회
+        db.query('SELECT * FROM quiz WHERE id = ?', [quizId], (err, results) => {
+            if (err || results.length === 0) {
+                return res.redirect('/');
+            }
+            
+            const quiz = results[0];
+            res.render('quiz/list', { quiz: quiz, user: req.session.user });
+        });
     });
 });
 
