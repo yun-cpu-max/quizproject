@@ -49,7 +49,7 @@ router.post('/create', upload.single('thumbnailImage'), (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-
+    
     const { title, description, category, questionType, questions, thumbnailType } = req.body;
     // 썸네일 경로 결정
     let thumbnailUrl = '';
@@ -127,14 +127,15 @@ router.get('/play/:id', async (req, res) => {
             questionText: currentQuestion.question,
             totalQuestions: req.session.totalQuestions,
             currentQuestion: currentQuestionNum,
-            questionType: currentQuestion.question_type
+            questionType: currentQuestion.question_type,
+            category: quiz.category
         };
 
         if (currentQuestion.question_type === 'multiple_choice') {
             let options = currentQuestion.options || [];
             options = options.sort(() => Math.random() - 0.5);
             quizPlayData.options = options;
-            return res.render('quiz/choice-play', quizPlayData);
+            return res.render('quiz/choice-play', { ...quizPlayData, user: req.session.user });
         }
 
         res.render('quiz/play', quizPlayData);
