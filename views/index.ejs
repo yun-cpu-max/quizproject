@@ -299,7 +299,7 @@
 
     <div class="filter-section">
         <form action="/" method="GET" class="search-container">
-            <div class="search-box">
+        <div class="search-box">
                 <div class="dropdown">
                     <button class="filter-btn btn btn-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         필터
@@ -324,8 +324,8 @@
                 <button type="submit" class="search-btn btn">
                     <i class="bi bi-search me-2"></i>검색
                 </button>
-            </div>
-        </form>
+        </div>
+    </form>
 
         <% if (sort || category || search) { %>
             <div class="filter-tags container">
@@ -374,21 +374,21 @@
         <% if (!images || images.length === 0) { %>
             <div class="text-center mt-5">퀴즈가 없습니다.</div>
         <% } %>
-        <div class="image-grid">
+    <div class="image-grid">
             <% if (images && images.length > 0) { %>
-                <% images.forEach(img => { %>
+        <% images.forEach(img => { %>
                     <a href="/quiz/list/<%= img.id %>" class="image-card-link">
-                        <div class="image-card">
-                            <div class="image-container">
+                <div class="image-card">
+                    <div class="image-container">
                                 <img src="<%= img.thumbnail_url || '/rogo.png' %>" alt="<%= img.title %>" class="card-img-top">
-                            </div>
-                            <div class="image-info">
-                                <h3 class="card-title"><%= img.title %></h3>
-                                <p class="card-text"><%= img.description %></p>
-                            </div>
-                        </div>
-                    </a>
-                <% }) %>
+                    </div>
+                    <div class="image-info">
+                        <h3 class="card-title"><%= img.title %></h3>
+                        <p class="card-text"><%= img.description %></p>
+                    </div>
+                </div>
+            </a>
+        <% }) %>
             <% } %>
         </div>
     </div>

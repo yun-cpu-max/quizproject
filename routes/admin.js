@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
                 const quizOffset = (quizPage - 1) * itemsPerPage;
                 db.query('SELECT id, title, category FROM quiz LIMIT ? OFFSET ?', 
                     [itemsPerPage, quizOffset], (err, quizzes) => {
-                    if (err) return res.send('퀴즈 조회 오류');
+                if (err) return res.send('퀴즈 조회 오류');
 
                     // 전체 퀴즈 수 조회
                     db.query('SELECT COUNT(*) as total FROM quiz', (err, quizCountResult) => {
@@ -58,10 +58,10 @@ router.get('/', async (req, res) => {
                         const totalQuizzes = quizCountResult[0].total;
                         const totalQuizPages = Math.ceil(totalQuizzes / itemsPerPage);
 
-                        res.render('admin', {
-                            user: req.session.user,
-                            pendingQuizzes,
-                            users,
+                res.render('admin', {
+                    user: req.session.user,
+                    pendingQuizzes,
+                    users,
                             quizzes,
                             userPagination: {
                                 currentPage: userPage,
