@@ -64,8 +64,8 @@ router.post('/create', upload.single('thumbnailImage'), (req, res) => {
     const questionsJson = JSON.stringify(questionsArr);
 
     // pending_quiz 테이블에 저장
-    db.query('INSERT INTO pending_quiz (category, title, description, thumbnail_url, questions) VALUES (?, ?, ?, ?, ?)',
-        [category, title, description, thumbnailUrl, questionsJson], (err) => {
+    db.query('INSERT INTO pending_quiz (category, title, description, thumbnail_url, questions, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [category, title, description, thumbnailUrl, questionsJson, req.session.user.id], (err) => {
         if (err) {
             console.error('퀴즈 신청 저장 실패:', err);
             return res.render('quiz/create', { user: req.session.user, error: '퀴즈 신청 저장 중 오류가 발생했습니다.', success: null });
@@ -91,7 +91,15 @@ router.get('/play/:id', async (req, res) => {
         if (!quiz) {
             throw new Error('퀴즈를 찾을 수 없습니다.');
         }
-        const questions = quiz.questions;
+        let questions;
+        try {
+            questions = JSON.parse(quiz.questions);
+            console.log('파싱된 questions:', questions);
+            if (!Array.isArray(questions)) questions = [];
+        } catch (e) {
+            console.error('questions 파싱 오류:', e);
+            questions = [];
+        }
 
         // reset 파라미터가 있거나, 기존 조건에 해당하면 세션 초기화
         if (reset || !req.session.quizId || req.session.quizId !== quizId || !req.session.questionOrder || req.session.totalQuestions !== count) {
