@@ -6,6 +6,35 @@ const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 const db = require('./db');
 const adminRouter = require('./routes/admin');
 const { Quiz } = require('./models/Quiz'); // Quiz 모델 import
+const multer = require('multer');
+const path = require('path');
+
+// Multer 설정
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/uploads/') // 업로드 경로 설정
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname) // 파일명 설정
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB 제한
+    },
+    fileFilter: function (req, file, cb) {
+        const filetypes = /jpeg|jpg|png|gif/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('이미지 파일만 업로드 가능합니다.'));
+    }
+});
 
 const app = express();
 const PORT = 3000;
@@ -36,8 +65,6 @@ app.use(session({
     }
 }));
 
-
-
 // 샘플 데이터 (Machugi.io처럼 이미지 목록을 표시)
 const images = [
   { title: "이미지 제목1", description: "이미지 설명1", src: "rogo.png" },
@@ -46,10 +73,49 @@ const images = [
 ];
 
 // 메인 페이지 라우트
-app.get("/", async (req, res) => {
-  const quizzes = await Quiz.getAll();
-  console.log('퀴즈 목록:', quizzes);
-  res.render("index", { images: quizzes, user: req.session.user });
+app.get("/", (req, res) => {
+    const sort = req.query.sort;
+    const category = req.query.category;
+    const search = req.query.search;
+    
+    // 기본 쿼리
+    let query = 'SELECT * FROM quiz WHERE 1=1';
+    const params = [];
+
+    // 검색어 필터 적용
+    if (search) {
+        query += ' AND (title LIKE ? OR description LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // 카테고리 필터 적용
+    if (category) {
+        query += ' AND category = ?';
+        params.push(category);
+    }
+
+    // 정렬 적용
+    if (sort === 'popular') {
+        query += ' ORDER BY views DESC';
+    } else if (sort === 'latest') {
+        query += ' ORDER BY created_at DESC';
+    }
+
+    // 퀴즈 데이터 가져오기
+    db.query(query, params, (err, quizResults) => {
+        if (err) {
+            console.error('퀴즈 조회 실패:', err);
+            return res.status(500).send('서버 오류');
+        }
+
+        res.render("index", { 
+            images: quizResults, 
+            user: req.session.user,
+            sort: sort,
+            category: category,
+            search: search
+        });
+    });
 });
 
 // 검색 기능 (사용자가 검색어 입력하면 필터링)
@@ -316,6 +382,35 @@ app.post('/change-password', (req, res) => {
 // 퀴즈 라우터 추가
 app.use('/quiz', quizRouter);
 app.use('/admin', adminRouter);
+
+// 퀴즈 생성 처리
+app.post('/quiz/create', upload.single('thumbnailImage'), (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    const { title, description, questionType, created_by } = req.body;
+    const thumbnail_url = req.file ? '/uploads/' + req.file.filename : '/rogo.png';
+    
+    // pending_quiz 테이블에 퀴즈 정보 저장
+    const insertQuizQuery = `
+        INSERT INTO pending_quiz (title, description, thumbnail_url, created_by) 
+        VALUES (?, ?, ?, ?)
+    `;
+    
+    db.query(insertQuizQuery, [title, description, thumbnail_url, req.session.user.id], (err, result) => {
+        if (err) {
+            console.error('퀴즈 생성 실패:', err);
+            return res.render('quiz/create', { 
+                error: '퀴즈 생성에 실패했습니다.', 
+                success: null,
+                user: req.session.user 
+            });
+        }
+
+        res.redirect('/');
+    });
+});
 
 // 서버 실행
 app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
