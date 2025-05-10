@@ -101,7 +101,7 @@
 
     <div class="quiz-container">
         <div class="quiz-card">
-            <img src="/rogo.png" alt="퀴즈 이미지" class="quiz-image">
+            <img src="<%= quiz.thumbnail_url || '/rogo.png' %>" alt="퀴즈 이미지" class="quiz-image">
             
             <div class="quiz-info">
                 <h2 class="quiz-title">
@@ -121,18 +121,17 @@
             </div>
 
             <div class="count-buttons mb-4">
-                <a href="/quiz/play/<%= quiz.id %>?count=5&reset=1" class="count-button">
-                    <i class="fas fa-play"></i> 5개 풀기
-                </a>
-                <a href="/quiz/play/<%= quiz.id %>?count=10&reset=1" class="count-button">
-                    <i class="fas fa-play"></i> 10개 풀기
-                </a>
-                <a href="/quiz/play/<%= quiz.id %>?count=20&reset=1" class="count-button">
-                    <i class="fas fa-play"></i> 20개 풀기
-                </a>
-                <a href="/quiz/play/<%= quiz.id %>?count=30&reset=1" class="count-button">
-                    <i class="fas fa-play"></i> 30개 풀기
-                </a>
+                <% const btnCounts = [5, 10, 20, 30].filter(n => n < questionCount); %>
+                <% btnCounts.forEach(function(n) { %>
+                    <a href="/quiz/play/<%= quiz.id %>?count=<%= n %>&reset=1" class="count-button">
+                        <i class="fas fa-play"></i> <%= n %>개 풀기
+                    </a>
+                <% }); %>
+                <% if (questionCount > 0) { %>
+                    <a href="/quiz/play/<%= quiz.id %>?count=<%= questionCount %>&reset=1" class="count-button">
+                        <i class="fas fa-play"></i> <%= questionCount %>개 풀기
+                    </a>
+                <% } %>
             </div>
         </div>
     </div>

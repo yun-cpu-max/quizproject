@@ -29,9 +29,12 @@ router.get('/list/:id', (req, res) => {
             if (err || results.length === 0) {
                 return res.redirect('/');
             }
-            
             const quiz = results[0];
-            res.render('quiz/list', { quiz: quiz, user: req.session.user });
+            // 문제 개수 조회
+            db.query('SELECT COUNT(*) AS count FROM question WHERE quiz_id = ?', [quizId], (err, qResults) => {
+                const questionCount = (qResults && qResults[0]) ? qResults[0].count : 0;
+                res.render('quiz/list', { quiz: quiz, user: req.session.user, questionCount });
+            });
         });
     });
 });
