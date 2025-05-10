@@ -214,6 +214,15 @@ router.post('/submit', async (req, res) => {
             isCorrect
         });
 
+        // 문제별 답안 DB 저장
+        db.query(
+            'INSERT INTO question_responses (user_id, quiz_id, question_id, user_answer, is_correct, answered_at) VALUES (?, ?, ?, ?, ?, NOW())',
+            [user ? user.id : null, quizId, currentQuestion.id, answer, isCorrect ? 1 : 0],
+            (err) => {
+                if (err) console.error('문제별 답안 저장 오류:', err);
+            }
+        );
+
         // 마지막 문제 제출 시 DB에 결과 저장 (로그인한 경우만, 중복 방지)
         if (user && quizId && currentQuestionNum === req.session.totalQuestions && !req.session.resultSaved) {
             const correctCount = req.session.results.filter(r => r.isCorrect).length;
@@ -292,7 +301,31 @@ router.get('/final-result', async (req, res) => {
 router.get('/dashboard/:quizId', async (req, res) => {
     const quizId = parseInt(req.params.quizId);
     const stats = await Quiz.getStatsByQuizId(quizId);
-    res.render('quiz/dashboard', { stats, quizId });
+
+    // 정렬 파라미터 처리
+    let order = req.query.order || 'id_asc';
+    let orderBy = 'qr.question_id ASC';
+    if (order === 'id_desc') orderBy = 'qr.question_id DESC';
+    if (order === 'rate_asc') orderBy = 'correct_rate ASC';
+    if (order === 'rate_desc') orderBy = 'correct_rate DESC';
+
+    // 문제별 정답률 + 문제 내용 조인 쿼리
+    db.query(
+        `SELECT qr.question_id, q.question, 
+                COUNT(*) AS total, 
+                SUM(qr.is_correct) AS correct, 
+                ROUND(SUM(qr.is_correct)/COUNT(*)*100,1) AS correct_rate
+           FROM question_responses qr
+           JOIN question q ON qr.question_id = q.id
+          WHERE qr.quiz_id = ?
+       GROUP BY qr.question_id, q.question
+       ORDER BY ${orderBy}`,
+        [quizId],
+        (err, questionStats) => {
+            stats.questionStats = questionStats || [];
+            res.render('quiz/dashboard', { stats, quizId, order });
+        }
+    );
 });
 
 module.exports = router;

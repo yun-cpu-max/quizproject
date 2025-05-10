@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f5f6fa; font-family: 'Noto Sans KR', sans-serif; }
-        .dashboard-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
+        .dashboard-container { max-width: 720px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
         h2 { color: #4a3b8c; margin-bottom: 24px; }
         ul { list-style: none; padding: 0; }
         li { font-size: 20px; margin-bottom: 16px; }
@@ -23,6 +23,62 @@
             <li><span class="stat-label">최고 맞힌 개수:</span> <%= stats.max_score !== null && stats.max_score !== undefined ? stats.max_score : 0 %>개</li>
             <li><span class="stat-label">최저 맞힌 개수:</span> <%= stats.min_score !== null && stats.min_score !== undefined ? stats.min_score : 0 %>개</li>
         </ul>
+        <hr>
+        <h4 style="display: flex; align-items: center; cursor: pointer;" id="toggleStatsBtn">
+            문제별 정답률
+            <span id="arrowIcon" style="font-size: 1.5rem; margin-left: 8px;">&#9660;</span>
+        </h4>
+        <div id="questionStatsTable" style="display: none;">
+            <table class="table table-bordered mt-3">
+                <thead>
+                    <tr>
+                        <th>문제 내용</th>
+                        <th style="white-space:nowrap;">
+                            정답률(%)
+                            <% if (order === 'rate_desc' || !order) { %>
+                                <a href="?order=rate_asc&showStats=1" class="btn btn-link btn-sm fw-bold text-primary">&#9650;</a>
+                            <% } else { %>
+                                <a href="?order=rate_desc&showStats=1" class="btn btn-link btn-sm fw-bold text-primary">&#9660;</a>
+                            <% } %>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (stats.questionStats && stats.questionStats.length > 0) { %>
+                        <% stats.questionStats.forEach(function(q, idx) { %>
+                            <tr>
+                                <td><%= q.question %></td>
+                                <td><%= q.correct_rate %></td>
+                            </tr>
+                        <% }); %>
+                    <% } else { %>
+                        <tr><td colspan="2">문제별 정답률 데이터가 없습니다.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+        <script>
+            const toggleBtn = document.getElementById('toggleStatsBtn');
+            const statsTable = document.getElementById('questionStatsTable');
+            const arrowIcon = document.getElementById('arrowIcon');
+            toggleBtn.addEventListener('click', function() {
+                if (statsTable.style.display === 'none') {
+                    statsTable.style.display = 'block';
+                    arrowIcon.innerHTML = '&#9650;'; // 위쪽 화살표
+                } else {
+                    statsTable.style.display = 'none';
+                    arrowIcon.innerHTML = '&#9660;'; // 아래쪽 화살표
+                }
+            });
+            // 쿼리스트링 showStats=1이 있으면 자동으로 펼침
+            window.addEventListener('DOMContentLoaded', function() {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('showStats') === '1') {
+                    statsTable.style.display = 'block';
+                    arrowIcon.innerHTML = '▲';
+                }
+            });
+        </script>
         <a href="/quiz/final-result" class="btn btn-primary mt-3">결과 페이지로 돌아가기</a>
         <a href="/" class="btn btn-secondary mt-3">홈으로</a>
     </div>
