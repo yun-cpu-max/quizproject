@@ -96,8 +96,11 @@ router.get('/play/:id', async (req, res) => {
         }
         let questions;
         try {
-            questions = JSON.parse(quiz.questions);
-            console.log('파싱된 questions:', questions);
+            if (typeof quiz.questions === 'string') {
+                questions = JSON.parse(quiz.questions);
+            } else {
+                questions = quiz.questions;
+            }
             if (!Array.isArray(questions)) questions = [];
         } catch (e) {
             console.error('questions 파싱 오류:', e);
