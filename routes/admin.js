@@ -18,20 +18,17 @@ router.get('/', async (req, res) => {
 
         // 퀴즈 데이터 파싱
         pendingQuizzes = pendingQuizzes.map(quiz => {
-            try {
-                // MySQL의 JSON 타입이 이미 파싱되어 있는 경우를 처리
-                if (typeof quiz.questions === 'string') {
-                    quiz.questions = JSON.parse(quiz.questions);
+            let questions = [];
+            if (Array.isArray(quiz.questions)) {
+                questions = quiz.questions;
+            } else if (typeof quiz.questions === 'string') {
+                try {
+                    questions = JSON.parse(quiz.questions);
+                } catch (e) {
+                    questions = [];
                 }
-                // questions가 undefined인 경우 빈 배열로 초기화
-                if (!quiz.questions) {
-                    quiz.questions = [];
-                }
-            } catch (e) {
-                console.error('퀴즈 데이터 파싱 오류:', e);
-                quiz.questions = [];
             }
-            return quiz;
+            return { ...quiz, questions };
         });
 
         // 모든 유저 정보 (페이지네이션 적용)
@@ -81,100 +78,113 @@ router.get('/', async (req, res) => {
     });
 });
 
-const saveQuestions = async (questionArr, quizId, createdBy) => {
-    for (let idx = 0; idx < questionArr.length; idx++) {
-        const q = questionArr[idx];
-        if (!q || !q.text) continue; // 질문이 없거나 텍스트가 없으면 건너뜀
-
-        // question_type 결정
-        const isMultipleChoice = q.option1 && q.option2 && q.option3 && q.option4;
-        const questionType = isMultipleChoice ? 'multiple_choice' : 'short_answer';
-        const questionText = q.text || '';
-        const correctAnswer = questionType === 'short_answer' ? (q.answer || '') : '';
-
-        const questionQuery = 'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by) VALUES (?, ?, ?, ?, ?)';
-
-        try {
-            // question 테이블에 저장
-            const questionResult = await new Promise((resolve, reject) => {
-                db.query(questionQuery, [quizId, questionText, questionType, correctAnswer, createdBy], (err, result) => {
-                    if (err) {
-                        console.error(`[${idx}] 문제 저장 오류:`, err);
-                        return reject(err);
-                    }
-                    resolve(result);
-                });
-            });
-
-            const questionId = questionResult.insertId;
-            console.log(`[${idx}] 문제 저장 완료:`, questionId);
-
-            // 객관식 문제의 경우 선택지 저장
-            if (questionType === 'multiple_choice') {
-                const options = [q.option1, q.option2, q.option3, q.option4];
-                const correctIdx = parseInt(q.correct, 10); // 정답 인덱스 (1부터 시작)
-
-                for (let i = 0; i < options.length; i++) {
-                    const optionText = options[i];
-                    if (!optionText) continue; // 선택지가 없으면 건너뜀
-                    const isCorrect = (i + 1 === correctIdx) ? 1 : 0; // 정답 여부 확인
-                    const optionQuery = 'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)';
-
-                    await new Promise((resolve, reject) => {
-                        db.query(optionQuery, [questionId, optionText, isCorrect, i + 1], (err) => {
-                            if (err) {
-                                console.error(`[${idx}] 선택지 저장 오류:`, err);
-                                return reject(err);
-                            }
-                            resolve();
-                        });
-                    });
-                }
-            }
-        } catch (err) {
-            console.error(`[${idx}] 질문 저장 중 오류 발생:`, err);
-        }
-    }
-};
-
 // 퀴즈 승인
-router.post('/approve', async (req, res) => {
+router.post('/approve', (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.redirect('/');
     }
     const id = parseInt(req.body.idx);
-    db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], async (err, results) => {
+    // pending_quiz에서 해당 퀴즈 데이터 조회
+    db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], (err, results) => {
         if (err || results.length === 0) return res.redirect('/admin');
         const quiz = results[0];
         let questions;
-
         try {
-            // 이미 객체인지 확인
-            if (typeof quiz.questions === 'string') {
-                questions = JSON.parse(quiz.questions); // 문자열이면 파싱
-            } else {
-                questions = quiz.questions; // 이미 객체라면 그대로 사용
-            }
-
-            if (!Array.isArray(questions)) questions = []; // 배열이 아니면 빈 배열로 초기화
+            questions = typeof quiz.questions === 'string' ? JSON.parse(quiz.questions) : quiz.questions;
+            if (!Array.isArray(questions)) questions = [];
         } catch (e) {
-            console.error('질문 데이터 파싱 오류:', e);
             questions = [];
         }
+        console.log('파싱 후 questions:', questions, Array.isArray(questions), questions.length);
 
-        console.log('파싱된 질문 데이터:', questions); // 디버깅용
-        questions = questions.filter(q => q); // 유효한 질문만 필터링
-
-        db.query('INSERT INTO quiz (category, title, description, thumbnail_url, created_by) VALUES (?, ?, ?, ?, ?)',
-            [quiz.category, quiz.title, quiz.description, quiz.thumbnail_url, quiz.created_by],
-            async function(err, result) {
-                if (err) return res.send('퀴즈 저장 오류');
-                const quizId = result.insertId;
-                await saveQuestions(questions, quizId, quiz.created_by);
-                db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
-                    res.redirect('/admin');
-                });
+        if (questions.length === 0) {
+            console.error('문제 데이터가 비어있음. pending_quiz만 삭제');
+            db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
+                res.redirect('/admin');
             });
+            return;
+        }
+
+        // 1. quiz 테이블에 저장
+        db.query(
+            'INSERT INTO quiz (category, title, description, thumbnail_url, created_by) VALUES (?, ?, ?, ?, ?)',
+            [quiz.category, quiz.title, quiz.description, quiz.thumbnail_url, quiz.created_by],
+            (err, result) => {
+                if (err) {
+                    console.error('퀴즈 저장 오류:', err);
+                    return res.redirect('/admin?error=퀴즈 저장 오류');
+                }
+                const quizId = result.insertId; // 진짜 quiz_id!
+
+                // 2. question 테이블에 저장
+                const insertQuestions = questions.map((q) => {
+                    return new Promise((resolve, reject) => {
+                        if (!q) return resolve();
+                        if (!q.text || !q.question_type) {
+                            console.error('필수값 누락: text 또는 question_type', q);
+                            return resolve();
+                        }
+                        let correctAnswer = '';
+                        if (q.question_type === 'multiple_choice') {
+                            const options = [q.option1, q.option2, q.option3, q.option4];
+                            const correctIdx = parseInt(q.correct, 10) - 1;
+                            correctAnswer = options[correctIdx] || '';
+                            if (!correctAnswer) {
+                                console.error('객관식 정답 누락: correct_answer', q);
+                                return resolve();
+                            }
+                        } else {
+                            correctAnswer = q.answer || '';
+                            if (!correctAnswer) {
+                                console.error('주관식 정답 누락: correct_answer', q);
+                                return resolve();
+                            }
+                        }
+                        db.query(
+                            'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by, question_img_url) VALUES (?, ?, ?, ?, ?, ?)',
+                            [
+                                quizId, // quiz 테이블의 id 사용!
+                                q.text,
+                                q.question_type,
+                                correctAnswer,
+                                q.created_by || quiz.created_by,
+                                q.question_img_url || quiz.thumbnail_url
+                            ],
+                            (err, questionResult) => {
+                                if (err) {
+                                    console.error('문제 저장 오류(개별):', err, q);
+                                    return reject(err);
+                                }
+                                const questionId = questionResult.insertId;
+                                console.log('문제 저장 성공:', { questionId, ...q });
+                                if (q.question_type === 'multiple_choice') {
+                                    const options = [q.option1, q.option2, q.option3, q.option4];
+                                    const correctIdx = q.correct;
+                                    options.forEach((opt, i) => {
+                                        const isCorrect = (correctIdx == (i+1)) ? 1 : 0;
+                                        const optionQuery = 'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)';
+                                        db.query(optionQuery, [questionId, opt, isCorrect, i+1]);
+                                    });
+                                }
+                                resolve();
+                            }
+                        );
+                    });
+                });
+
+                Promise.all(insertQuestions)
+                    .then(() => {
+                        console.log('모든 문제 저장 완료');
+                        db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
+                            res.redirect('/admin');
+                        });
+                    })
+                    .catch((err) => {
+                        console.error('문제 저장 중 오류 발생(전체):', err);
+                        res.send('문제 저장 중 오류 발생: ' + err);
+                    });
+            }
+        );
     });
 });
 
@@ -204,4 +214,4 @@ router.post('/notice', (req, res) => {
     });
 });
 
-module.exports = router;
+module.exports = router; 

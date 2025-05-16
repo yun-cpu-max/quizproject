@@ -198,6 +198,10 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">문제 이미지 (선택)</label>
+                            <input type="file" class="form-control" name="questions[${qIdx}][image]" accept="image/*">
+                        </div>
                     </div>
                 </div>
             `;
@@ -216,6 +220,10 @@
                         <div class="mb-3">
                             <label class="form-label">정답</label>
                             <input type="text" class="form-control" name="questions[${qIdx}][answer]" placeholder="정답 입력" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">문제 이미지 (선택)</label>
+                            <input type="file" class="form-control" name="questions[${qIdx}][image]" accept="image/*">
                         </div>
                     </div>
                 </div>
