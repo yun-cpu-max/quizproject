@@ -4,10 +4,40 @@ const { Quiz } = require('../models/Quiz');
 const db = require('../db'); // DB 연결 객체 불러오기
 const path = require('path');
 const multer = require('multer');
-const upload = multer({
-    dest: path.join(__dirname, '../public/uploads/'),
-    limits: { fileSize: 5 * 1024 * 1024 }
+const fs = require('fs');
+
+// 썸네일용 storage
+const thumbnailStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = path.join(__dirname, '../public/uploads/thumbnails/');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const userId = req.session.user ? req.session.user.id : 'guest';
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        cb(null, `user${userId}_${timestamp}${ext}`);
+    }
 });
+
+// 문제 이미지용 storage
+const questionImageStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = path.join(__dirname, '../public/uploads/questions/');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const userId = req.session.user ? req.session.user.id : 'guest';
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        cb(null, `qimg_${userId}_${timestamp}_${file.originalname}`);
+    }
+});
+
+const uploadThumbnail = multer({ storage: thumbnailStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadQuestionImage = multer({ storage: questionImageStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -44,31 +74,38 @@ router.get('/create', (req, res) => {
     res.render('quiz/create', { user: req.session.user, success: null, error: null });
 });
 
-// 퀴즈 생성 처리
-router.post('/create', upload.single('thumbnailImage'), (req, res) => {
+// 퀴즈 생성 처리 (썸네일 + 문제 이미지)
+router.post('/create', uploadThumbnail.single('thumbnailImage'), async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
-    // 1. 폼에서 값 꺼내기
     const { title, description, category, questionType, questions, thumbnailType } = req.body;
 
-    // 2. 썸네일 경로 결정
+    // 썸네일 처리
     let thumbnailUrl = '';
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && req.file) {
-        thumbnailUrl = '/uploads/' + req.file.filename;
+        thumbnailUrl = '/uploads/thumbnails/' + req.file.filename;
     }
 
-    // 3. 문제 배열/JSON 변환
+    // 문제 이미지 처리 (프론트에서 문제별 이미지 업로드 구현 필요)
     let questionsArr = Object.values(questions).filter(q => q);
-    questionsArr = questionsArr.map((q, idx) => {
-        return {
-            ...q,
-            question_type: q.question_type || (questionType === 'choice' ? 'multiple_choice' : 'short_answer')
-        };
-    });
+    questionsArr = await Promise.all(questionsArr.map(async (q, idx) => {
+        // 문제 이미지 업로드 처리
+        if (q.imageFile) {
+            // imageFile은 프론트에서 파일 input name을 questionImage0, questionImage1 ... 등으로 넘겨야 함
+            const fileField = `questionImage${idx}`;
+            if (req.files && req.files[fileField] && req.files[fileField][0]) {
+                const file = req.files[fileField][0];
+                q.image = '/uploads/questions/' + file.filename;
+            }
+        }
+        q.question_type = q.question_type || (questionType === 'choice' ? 'multiple_choice' : 'short_answer');
+        return q;
+    }));
+
     const questionsJson = JSON.stringify(questionsArr);
 
-    // 4. pending_quiz에 저장
+    // DB 저장
     db.query(
         'INSERT INTO pending_quiz (category, title, description, thumbnail_url, questions, created_by) VALUES (?, ?, ?, ?, ?, ?)',
         [category, title, description, thumbnailUrl, questionsJson, req.session.user.id],

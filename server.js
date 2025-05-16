@@ -10,17 +10,17 @@ const multer = require('multer');
 const path = require('path');
 
 // Multer 설정
-const storage = multer.diskStorage({
+const thumbnailStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads/') // 업로드 경로 설정
+        cb(null, 'public/uploads/thumbnails/');
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname) // 파일명 설정
+        cb(null, Date.now() + '-' + file.originalname);
     }
 });
 
 const upload = multer({ 
-    storage: storage,
+    storage: thumbnailStorage,
     limits: {
         fileSize: 5 * 1024 * 1024 // 5MB 제한
     },
@@ -28,7 +28,6 @@ const upload = multer({
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
         if (mimetype && extname) {
             return cb(null, true);
         }
@@ -388,16 +387,13 @@ app.post('/quiz/create', upload.single('thumbnailImage'), (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
-
     const { title, description, questionType, created_by } = req.body;
-    const thumbnail_url = req.file ? '/uploads/' + req.file.filename : '/rogo.png';
-    
+    const thumbnail_url = req.file ? '/uploads/thumbnails/' + req.file.filename : '/uploads/thumbnails/rogo.png';
     // pending_quiz 테이블에 퀴즈 정보 저장
     const insertQuizQuery = `
         INSERT INTO pending_quiz (title, description, thumbnail_url, created_by) 
         VALUES (?, ?, ?, ?)
     `;
-    
     db.query(insertQuizQuery, [title, description, thumbnail_url, req.session.user.id], (err, result) => {
         if (err) {
             console.error('퀴즈 생성 실패:', err);
@@ -407,7 +403,6 @@ app.post('/quiz/create', upload.single('thumbnailImage'), (req, res) => {
                 user: req.session.user 
             });
         }
-
         res.redirect('/');
     });
 });
