@@ -337,24 +337,173 @@ router.get('/dashboard/:quizId', async (req, res) => {
     );
 });
 
-// 사용자별 퀴즈 대시보드 (새로운 나의 퀴즈 활동 페이지)
-router.get('/dashboard_user', (req, res) => {
-    // 인증된 사용자인지 확인 (req.session.user 사용)
+// 사용자별 퀴즈 대시보드 (나의 퀴즈 활동 페이지)
+router.get('/dashboard_user', async (req, res) => {
     if (!req.session.user) {
-        // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
         return res.redirect('/login');
     }
-    // dashboard_user.ejs를 렌더링합니다.
-    // 필요한 경우, 이 라우트에서 사용자 관련 데이터를 조회하여 템플릿에 전달할 수 있습니다.
-    res.render('quiz/dashboard_user', { 
-        user: req.session.user, // 사용자 정보 전달 (req.session.user 사용)
-        // dashboard_user.ejs에서 사용하는 변수들에 대한 초기값 또는 실제 데이터 전달
-        totalQuizzes: 0, // 예시 값, 실제로는 DB에서 조회
-        averageScore: 0, // 예시 값
-        correctRate: 0,  // 예시 값
-        recentAttempts: [], // 예시 값
-        wrongAnswers: []    // 예시 값
-    });
+
+    const userId = req.session.user.id;
+
+    try {
+        // 1. 총 응시 퀴즈 수
+        const totalQuizzesQuery = `
+            SELECT COUNT(DISTINCT qr.quiz_id) AS totalQuizzes
+            FROM quiz_results qr
+            WHERE qr.user_id = ?;
+        `;
+
+        // 2. 평균 점수 및 전체 정답률
+        const overallStatsQuery = `
+            SELECT 
+                COALESCE(AVG(qr.score / qr.total_questions * 100), 0) AS averageScore,
+                COALESCE(SUM(qr.score) * 100.0 / SUM(qr.total_questions), 0) AS correctRate
+            FROM quiz_results qr
+            WHERE qr.user_id = ?;
+        `;
+        
+        // 3. 최근 응시 기록 (최근 5개)
+        const recentAttemptsQuery = `
+            SELECT 
+                q.title AS quizTitle,
+                qr.created_at AS attemptDate,
+                qr.score,
+                qr.total_questions AS totalQuestions,
+                (qr.score * 100.0 / qr.total_questions) AS correctPercentage,
+                qr.quiz_id as quizId 
+            FROM quiz_results qr
+            JOIN quiz q ON qr.quiz_id = q.id
+            WHERE qr.user_id = ?
+            ORDER BY qr.created_at DESC
+            LIMIT 5;
+        `;
+
+        // 4. 오답 복습 (최근 5개 틀린 문제)
+        const wrongAnswersQuery = `
+            SELECT 
+                q.title AS quizTitle,
+                qs.id AS questionId,
+                qs.question AS questionText,
+                q_res.user_answer AS myAnswer,
+                qs.correct_answer AS subjectiveCorrectAnswer, 
+                qs.question_type AS questionType,
+                q_res.answered_at as answeredDate,
+                q.id as quizId,
+                (SELECT COUNT(*) + 1 FROM question q_inner WHERE q_inner.quiz_id = q.id AND q_inner.id < qs.id) AS questionNumber
+            FROM question_responses q_res
+            JOIN question qs ON q_res.question_id = qs.id
+            JOIN quiz q ON q_res.quiz_id = q.id
+            WHERE q_res.user_id = ? AND q_res.is_correct = 0
+            ORDER BY q_res.answered_at DESC
+            LIMIT 5;
+        `;
+
+        const promises = [
+            new Promise((resolve, reject) => {
+                db.query(totalQuizzesQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results[0] ? results[0].totalQuizzes : 0);
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(overallStatsQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results[0] || { averageScore: 0, correctRate: 0 });
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(recentAttemptsQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    const formattedResults = results.map(attempt => ({
+                        ...attempt,
+                        attemptDate: new Date(attempt.attemptDate).toLocaleDateString('ko-KR'),
+                        rate: parseFloat(attempt.correctPercentage).toFixed(1) + '%'
+                    }));
+                    resolve(formattedResults);
+                });
+            }),
+            new Promise((resolve, reject) => { // Promise for wrongAnswers
+                db.query(wrongAnswersQuery, [userId], (err, wrongAnswerItems) => {
+                    if (err) return reject(err);
+                    if (wrongAnswerItems.length === 0) return resolve([]);
+
+                    const multipleChoiceQuestionIds = wrongAnswerItems
+                        .filter(item => item.questionType === 'multiple_choice')
+                        .map(item => item.questionId);
+
+                    let correctOptionsMap = {};
+                    if (multipleChoiceQuestionIds.length > 0) {
+                        const correctOptionsQuery = `
+                            SELECT question_id, option_text 
+                            FROM question_option 
+                            WHERE question_id IN (?) AND is_correct = 1;
+                        `;
+                        db.query(correctOptionsQuery, [multipleChoiceQuestionIds], (optErr, correctOptions) => {
+                            if (optErr) {
+                                console.error("Error fetching correct options for wrong answers:", optErr);
+                            } else {
+                                correctOptions.forEach(opt => {
+                                    correctOptionsMap[opt.question_id] = opt.option_text;
+                                });
+                            }
+                            const formattedResults = wrongAnswerItems.map(item => {
+                                let correctAnswerDisplay = item.subjectiveCorrectAnswer;
+                                if (item.questionType === 'multiple_choice') {
+                                    correctAnswerDisplay = correctOptionsMap[item.questionId] || "정답 정보 오류";
+                                }
+                                return {
+                                    quizTitle: item.quizTitle,
+                                    questionNumber: item.questionNumber,
+                                    questionText: item.questionText,
+                                    myAnswer: item.myAnswer,
+                                    correctAnswer: correctAnswerDisplay,
+                                    explanation: "해설이 제공되지 않는 문제입니다.",
+                                    quizId: item.quizId,
+                                    questionId: item.questionId
+                                };
+                            });
+                            resolve(formattedResults);
+                        });
+                    } else {
+                        const formattedResults = wrongAnswerItems.map(item => ({
+                            quizTitle: item.quizTitle,
+                            questionNumber: item.questionNumber,
+                            questionText: item.questionText,
+                            myAnswer: item.myAnswer,
+                            correctAnswer: item.subjectiveCorrectAnswer,
+                            explanation: "해설이 제공되지 않는 문제입니다.",
+                            quizId: item.quizId,
+                            questionId: item.questionId
+                        }));
+                        resolve(formattedResults);
+                    }
+                });
+            })
+        ];
+
+        const [totalQuizzes, overallStats, recentAttempts, wrongAnswers] = await Promise.all(promises);
+
+        res.render('quiz/dashboard_user', {
+            user: req.session.user,
+            totalQuizzes: totalQuizzes,
+            averageScore: parseFloat(overallStats.averageScore).toFixed(1),
+            correctRate: parseFloat(overallStats.correctRate).toFixed(1),
+            recentAttempts: recentAttempts,
+            wrongAnswers: wrongAnswers
+        });
+
+    } catch (error) {
+        console.error("사용자 대시보드 데이터 조회 오류:", error);
+        res.render('quiz/dashboard_user', {
+            user: req.session.user,
+            totalQuizzes: 0,
+            averageScore: '0',
+            correctRate: '0',
+            recentAttempts: [],
+            wrongAnswers: [],
+            error: "데이터를 불러오는 중 오류가 발생했습니다."
+        });
+    }
 });
 
 module.exports = router;

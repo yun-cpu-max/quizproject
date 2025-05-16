@@ -129,62 +129,74 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // 임시 데이터 (추후 DB 연동 시 이 부분을 수정/삭제)
-        // EJS에서는 서버로부터 받은 데이터를 사용하게 됩니다. 
-        // 예를 들어, locals 객체를 통해 데이터를 전달받을 수 있습니다.
-        // 아래 JavaScript 변수들은 EJS 템플릿 내에서 <% %> 또는 <%= %> 태그를 사용하여 
-        // 서버에서 전달된 동적 데이터로 대체될 수 있습니다.
+        const totalQuizzesVal = "<%= typeof totalQuizzes !== 'undefined' ? totalQuizzes : 0 %>";
+        const averageScoreVal = "<%= typeof averageScore !== 'undefined' ? averageScore : '0' %>";
+        const correctRateVal = "<%= typeof correctRate !== 'undefined' ? correctRate : '0' %>";   
 
-        const totalQuizzesVal = typeof totalQuizzes !== 'undefined' ? totalQuizzes : 12;
-        const averageScoreVal = typeof averageScore !== 'undefined' ? averageScore : 82;
-        const correctRateVal = typeof correctRate !== 'undefined' ? correctRate : 76;
+        const recentAttemptsData = JSON.parse('<%- JSON.stringify(typeof recentAttempts !== "undefined" ? recentAttempts : []) %>');
+        const wrongAnswersData = JSON.parse('<%- JSON.stringify(typeof wrongAnswers !== "undefined" ? wrongAnswers : []) %>');
+        const serverError = "<%= typeof error !== 'undefined' ? error : '' %>";
 
-        const recentAttemptsData = typeof recentAttempts !== 'undefined' ? recentAttempts : [
-            { title: "IT 상식 퀴즈", date: "2025-05-10", score: 85, rate: "90%" },
-            { title: "역사 퀴즈", date: "2025-05-08", score: 78, rate: "72%" }
-        ];
-
-        const wrongAnswersData = typeof wrongAnswers !== 'undefined' ? wrongAnswers : [
-            { quizTitle: "역사 퀴즈", questionNumber: 3, questionText: "고려 시대의 수도는 어디인가?", myAnswer: "경주", correctAnswer: "개경" }
-        ];
-
-        // 데이터 바인딩
         document.addEventListener('DOMContentLoaded', function () {
+            if (serverError) {
+                const errorDiv = document.createElement('div');
+                errorDiv.classList.add('alert', 'alert-danger');
+                errorDiv.textContent = serverError;
+                document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.dashboard-header').nextSibling);
+            }
+
             document.getElementById('totalQuizzes').textContent = totalQuizzesVal;
             document.getElementById('averageScore').textContent = averageScoreVal + "점";
             document.getElementById('correctRate').textContent = correctRateVal + "%";
 
             const recentAttemptsTableBody = document.getElementById('recentAttemptsTable');
-            recentAttemptsData.forEach(attempt => {
+            recentAttemptsTableBody.innerHTML = ''; 
+            if (recentAttemptsData.length > 0) {
+                recentAttemptsData.forEach(attempt => {
+                    const row = recentAttemptsTableBody.insertRow();
+                    row.insertCell().textContent = attempt.quizTitle;
+                    row.insertCell().textContent = attempt.attemptDate; 
+                    row.insertCell().textContent = attempt.score + "점 / " + attempt.totalQuestions + "문제";
+                    row.insertCell().textContent = attempt.rate; 
+                    const retryButtonCell = row.insertCell();
+                    const button = document.createElement('button');
+                    button.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+                    button.textContent = '다시 풀기';
+                    button.onclick = function() { location.href = `/quiz/list/${attempt.quizId}`; };
+                    retryButtonCell.appendChild(button);
+                });
+            } else {
                 const row = recentAttemptsTableBody.insertRow();
-                row.insertCell().textContent = attempt.title;
-                row.insertCell().textContent = attempt.date;
-                row.insertCell().textContent = attempt.score + "점";
-                row.insertCell().textContent = attempt.rate;
-                const retryButtonCell = row.insertCell();
-                const button = document.createElement('button');
-                button.classList.add('btn', 'btn-sm', 'btn-outline-primary');
-                button.textContent = '다시 풀기';
-                // EJS에서는 동적 링크를 생성할 수 있습니다. 예:
-                // button.onclick = function() { location.href = `/quiz/${attempt.id}/retake`; };
-                retryButtonCell.appendChild(button);
-            });
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.textContent = '최근 응시 기록이 없습니다.';
+                cell.classList.add('text-center');
+            }
 
             const wrongAnswersDiv = document.getElementById('wrongAnswersSection');
-            wrongAnswersData.forEach(item => {
-                const reviewItemDiv = document.createElement('div');
-                reviewItemDiv.classList.add('review-item');
-                reviewItemDiv.innerHTML = `
-                    <h5><span role="img" aria-label="cross mark">❌</span> ${item.quizTitle} - ${item.questionNumber}번 문제</h5>
-                    <p><strong>Q:</strong> ${item.questionText}</p>
-                    <p><strong>내 답변:</strong> ${item.myAnswer} / <strong>정답:</strong> ${item.correctAnswer}</p>
-                    <button class="btn btn-sm btn-info" onclick="toggleExplanation('explanation-${item.id}')">해설 보기</button>
-                    <div id="explanation-${item.id}" style="display:none; margin-top:10px; padding:10px; border:1px solid #eee; background-color:#f9f9f9;">
-                        ${item.explanation || '해설이 없습니다.'}
-                    </div>
-                `;
-                wrongAnswersDiv.appendChild(reviewItemDiv);
-            });
+            wrongAnswersDiv.innerHTML = ''; 
+            if (wrongAnswersData.length > 0) {
+                wrongAnswersData.forEach(item => {
+                    const reviewItemDiv = document.createElement('div');
+                    reviewItemDiv.classList.add('review-item');
+                    const explanationId = `explanation-${item.quizId}-${item.questionId}`; 
+                    reviewItemDiv.innerHTML = `
+                        <h5><span role="img" aria-label="cross mark">❌</span> ${item.quizTitle} - ${item.questionNumber}번 문제</h5>
+                        <p><strong>Q:</strong> ${item.questionText}</p>
+                        <p><strong>내 답변:</strong> <span class="text-danger">${item.myAnswer}</span> / <strong>정답:</strong> <span class="text-success">${item.correctAnswer}</span></p>
+                        <button class="btn btn-sm btn-info" onclick="toggleExplanation('${explanationId}')">해설 보기</button>
+                        <div id="${explanationId}" style="display:none; margin-top:10px; padding:10px; border:1px solid #eee; background-color:#f9f9f9;">
+                            ${item.explanation}
+                        </div>
+                    `; 
+                    wrongAnswersDiv.appendChild(reviewItemDiv);
+                });
+            } else {
+                const noReviewDiv = document.createElement('div');
+                noReviewDiv.classList.add('alert', 'alert-light');
+                noReviewDiv.textContent = '오답 기록이 없습니다. 잘하셨어요!';
+                wrongAnswersDiv.appendChild(noReviewDiv);
+            }
         });
 
         function toggleExplanation(elementId) {
