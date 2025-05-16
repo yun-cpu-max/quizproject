@@ -462,56 +462,95 @@ router.get('/dashboard_user', async (req, res) => {
                     if (err) return reject(err);
                     if (wrongAnswerItems.length === 0) return resolve([]);
 
-                    const multipleChoiceQuestionIds = wrongAnswerItems
-                        .filter(item => item.questionType === 'multiple_choice')
-                        .map(item => item.questionId);
+                    const multipleChoiceItems = wrongAnswerItems.filter(item => item.questionType === 'multiple_choice');
+                    
+                    const multipleChoiceQuestionIds = multipleChoiceItems.map(item => item.questionId);
+                    const userAnswerOptionIds = multipleChoiceItems
+                        .map(item => parseInt(item.myAnswer, 10))
+                        .filter(id => !isNaN(id));
 
-                    let correctOptionsMap = {};
+                    let correctOptionsMap = {};    
+                    let userAnswerTextsMap = {};   
+
+                    const detailFetchingPromises = [];
+
                     if (multipleChoiceQuestionIds.length > 0) {
-                        const correctOptionsQuery = `
-                            SELECT question_id, option_text 
-                            FROM question_option 
-                            WHERE question_id IN (?) AND is_correct = 1;
-                        `;
-                        db.query(correctOptionsQuery, [multipleChoiceQuestionIds], (optErr, correctOptions) => {
-                            if (optErr) {
-                                console.error("Error fetching correct options for wrong answers:", optErr);
-                            } else {
-                                correctOptions.forEach(opt => {
-                                    correctOptionsMap[opt.question_id] = opt.option_text;
-                                });
-                            }
-                            const formattedResults = wrongAnswerItems.map(item => {
-                                let correctAnswerDisplay = item.subjectiveCorrectAnswer;
-                                if (item.questionType === 'multiple_choice') {
-                                    correctAnswerDisplay = correctOptionsMap[item.questionId] || "정답 정보 오류";
+                        detailFetchingPromises.push(new Promise((resInternal, rejInternal) => {
+                            const correctOptionsQuery = `
+                                SELECT question_id, option_text 
+                                FROM question_option 
+                                WHERE question_id IN (?) AND is_correct = 1;
+                            `;
+                            db.query(correctOptionsQuery, [multipleChoiceQuestionIds], (optErr, correctOptions) => {
+                                if (optErr) {
+                                    console.error("Error fetching correct options for wrong answers:", optErr);
+                                } else {
+                                    correctOptions.forEach(opt => {
+                                        correctOptionsMap[opt.question_id] = opt.option_text;
+                                    });
                                 }
-                                return {
-                                    quizTitle: item.quizTitle,
-                                    questionNumber: item.questionNumber,
-                                    questionText: item.questionText,
-                                    myAnswer: item.myAnswer,
-                                    correctAnswer: correctAnswerDisplay,
-                                    explanation: "해설이 제공되지 않는 문제입니다.",
-                                    quizId: item.quizId,
-                                    questionId: item.questionId
-                                };
+                                resInternal();
                             });
-                            resolve(formattedResults);
+                        }));
+                    }
+
+                    if (userAnswerOptionIds.length > 0) {
+                        detailFetchingPromises.push(new Promise((resInternal, rejInternal) => {
+                            const userAnswerTextsQuery = `
+                                SELECT id, option_text 
+                                FROM question_option 
+                                WHERE id IN (?);
+                            `;
+                            db.query(userAnswerTextsQuery, [userAnswerOptionIds], (optErr, userAnswerOptions) => {
+                                if (optErr) {
+                                    console.error("Error fetching user answer option texts:", optErr);
+                                } else {
+                                    userAnswerOptions.forEach(opt => {
+                                        userAnswerTextsMap[opt.id] = opt.option_text;
+                                    });
+                                }
+                                resInternal();
+                            });
+                        }));
+                    }
+
+                    Promise.all(detailFetchingPromises).then(() => {
+                        const formattedResults = wrongAnswerItems.map(item => {
+                            let correctAnswerDisplay = item.subjectiveCorrectAnswer; 
+                            let myAnswerDisplay = item.myAnswer;                     
+
+                            if (item.questionType === 'multiple_choice') {
+                                correctAnswerDisplay = correctOptionsMap[item.questionId] || "정답 정보 오류";
+                                
+                                const userAnswerId = parseInt(item.myAnswer, 10);
+                                myAnswerDisplay = userAnswerTextsMap[userAnswerId] || item.myAnswer; 
+                            }
+                            return {
+                                quizTitle: item.quizTitle,
+                                questionNumber: item.questionNumber,
+                                questionText: item.questionText,
+                                myAnswer: myAnswerDisplay, 
+                                correctAnswer: correctAnswerDisplay,
+                                explanation: "해설이 제공되지 않는 문제입니다.",
+                                quizId: item.quizId,
+                                questionId: item.questionId
+                            };
                         });
-                    } else {
-                        const formattedResults = wrongAnswerItems.map(item => ({
+                        resolve(formattedResults);
+                    }).catch(detailErr => {
+                        console.error("Error in Promise.all for detail fetching:", detailErr);
+                        const fallbackResults = wrongAnswerItems.map(item => ({
                             quizTitle: item.quizTitle,
                             questionNumber: item.questionNumber,
                             questionText: item.questionText,
-                            myAnswer: item.myAnswer,
-                            correctAnswer: item.subjectiveCorrectAnswer,
+                            myAnswer: item.myAnswer, 
+                            correctAnswer: item.subjectiveCorrectAnswer, 
                             explanation: "해설이 제공되지 않는 문제입니다.",
                             quizId: item.quizId,
                             questionId: item.questionId
                         }));
-                        resolve(formattedResults);
-                    }
+                        resolve(fallbackResults); 
+                    });
                 });
             })
         ];
