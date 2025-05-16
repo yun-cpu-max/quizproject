@@ -337,5 +337,25 @@ router.get('/dashboard/:quizId', async (req, res) => {
     );
 });
 
+// 사용자별 퀴즈 대시보드 (새로운 나의 퀴즈 활동 페이지)
+router.get('/dashboard_user', (req, res) => {
+    // 인증된 사용자인지 확인 (req.session.user 사용)
+    if (!req.session.user) {
+        // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+        return res.redirect('/login');
+    }
+    // dashboard_user.ejs를 렌더링합니다.
+    // 필요한 경우, 이 라우트에서 사용자 관련 데이터를 조회하여 템플릿에 전달할 수 있습니다.
+    res.render('quiz/dashboard_user', { 
+        user: req.session.user, // 사용자 정보 전달 (req.session.user 사용)
+        // dashboard_user.ejs에서 사용하는 변수들에 대한 초기값 또는 실제 데이터 전달
+        totalQuizzes: 0, // 예시 값, 실제로는 DB에서 조회
+        averageScore: 0, // 예시 값
+        correctRate: 0,  // 예시 값
+        recentAttempts: [], // 예시 값
+        wrongAnswers: []    // 예시 값
+    });
+});
+
 module.exports = router;
 

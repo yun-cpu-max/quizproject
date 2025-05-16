@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자 대시보드</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        .summary-card {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .chart-placeholder {
+            height: 200px;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .review-item {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header text-center">
+            <h1><span role="img" aria-label="home">🏠</span> 사용자 대시보드</h1>
+        </div>
+
+        <!-- 요약 카드 섹션 -->
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="check">✔️</span> 총 응시 퀴즈 수</h5>
+                        <p class="card-text display-4" id="totalQuizzes">12</p>
+                        <p class="card-text"><small class="text-muted">응시한 퀴즈 수</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="chart">📊</span> 평균 점수</h5>
+                        <p class="card-text display-4" id="averageScore">82점</p>
+                        <p class="card-text"><small class="text-muted">전체 평균</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="target">🎯</span> 정답률</h5>
+                        <p class="card-text display-4" id="correctRate">76%</p>
+                        <p class="card-text"><small class="text-muted">총 정답 비율</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 최근 응시 기록 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="calendar">📅</span> 최근 응시 기록</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="thead-light">
+                    <tr>
+                        <th>퀴즈 제목</th>
+                        <th>응시 날짜</th>
+                        <th>점수</th>
+                        <th>정답률</th>
+                        <th>다시 풀기</th>
+                    </tr>
+                </thead>
+                <tbody id="recentAttemptsTable">
+                    <!-- 데이터는 JavaScript로 채워집니다. -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 퀴즈 통계 시각화 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="stats">📊</span> 퀴즈 통계 시각화</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-placeholder">
+                    <p class="text-muted">📈 점수 변화 추이 (Bar Chart)<br>[ Jan ] [ Feb ] [ Mar ] [ Apr ]</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-placeholder">
+                    <p class="text-muted">🥧 카테고리별 성과 (Pie Chart)<br>[IT:40%] [역사:30%] [기타:30%]</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오답 복습 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="memo">📝</span> 오답 복습 섹션</h2>
+        <div id="wrongAnswersSection">
+            <!-- 데이터는 JavaScript로 채워집니다. -->
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // 임시 데이터 (추후 DB 연동 시 이 부분을 수정/삭제)
+        // EJS에서는 서버로부터 받은 데이터를 사용하게 됩니다. 
+        // 예를 들어, locals 객체를 통해 데이터를 전달받을 수 있습니다.
+        // 아래 JavaScript 변수들은 EJS 템플릿 내에서 <% %> 또는 <%= %> 태그를 사용하여 
+        // 서버에서 전달된 동적 데이터로 대체될 수 있습니다.
+
+        const totalQuizzesVal = typeof totalQuizzes !== 'undefined' ? totalQuizzes : 12;
+        const averageScoreVal = typeof averageScore !== 'undefined' ? averageScore : 82;
+        const correctRateVal = typeof correctRate !== 'undefined' ? correctRate : 76;
+
+        const recentAttemptsData = typeof recentAttempts !== 'undefined' ? recentAttempts : [
+            { title: "IT 상식 퀴즈", date: "2025-05-10", score: 85, rate: "90%" },
+            { title: "역사 퀴즈", date: "2025-05-08", score: 78, rate: "72%" }
+        ];
+
+        const wrongAnswersData = typeof wrongAnswers !== 'undefined' ? wrongAnswers : [
+            { quizTitle: "역사 퀴즈", questionNumber: 3, questionText: "고려 시대의 수도는 어디인가?", myAnswer: "경주", correctAnswer: "개경" }
+        ];
+
+        // 데이터 바인딩
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('totalQuizzes').textContent = totalQuizzesVal;
+            document.getElementById('averageScore').textContent = averageScoreVal + "점";
+            document.getElementById('correctRate').textContent = correctRateVal + "%";
+
+            const recentAttemptsTableBody = document.getElementById('recentAttemptsTable');
+            recentAttemptsData.forEach(attempt => {
+                const row = recentAttemptsTableBody.insertRow();
+                row.insertCell().textContent = attempt.title;
+                row.insertCell().textContent = attempt.date;
+                row.insertCell().textContent = attempt.score + "점";
+                row.insertCell().textContent = attempt.rate;
+                const retryButtonCell = row.insertCell();
+                const button = document.createElement('button');
+                button.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+                button.textContent = '다시 풀기';
+                // EJS에서는 동적 링크를 생성할 수 있습니다. 예:
+                // button.onclick = function() { location.href = `/quiz/${attempt.id}/retake`; };
+                retryButtonCell.appendChild(button);
+            });
+
+            const wrongAnswersDiv = document.getElementById('wrongAnswersSection');
+            wrongAnswersData.forEach(item => {
+                const reviewItemDiv = document.createElement('div');
+                reviewItemDiv.classList.add('review-item');
+                reviewItemDiv.innerHTML = `
+                    <h5><span role="img" aria-label="cross mark">❌</span> ${item.quizTitle} - ${item.questionNumber}번 문제</h5>
+                    <p><strong>Q:</strong> ${item.questionText}</p>
+                    <p><strong>내 답변:</strong> ${item.myAnswer} / <strong>정답:</strong> ${item.correctAnswer}</p>
+                    <button class="btn btn-sm btn-info" onclick="toggleExplanation('explanation-${item.id}')">해설 보기</button>
+                    <div id="explanation-${item.id}" style="display:none; margin-top:10px; padding:10px; border:1px solid #eee; background-color:#f9f9f9;">
+                        ${item.explanation || '해설이 없습니다.'}
+                    </div>
+                `;
+                wrongAnswersDiv.appendChild(reviewItemDiv);
+            });
+        });
+
+        function toggleExplanation(elementId) {
+            const explanationDiv = document.getElementById(elementId);
+            if (explanationDiv) {
+                explanationDiv.style.display = explanationDiv.style.display === "none" ? "block" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
