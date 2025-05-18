@@ -11,6 +11,10 @@ router.get('/', async (req, res) => {
     const itemsPerPage = 10;
     const userPage = parseInt(req.query.userPage) || 1;
     const quizPage = parseInt(req.query.quizPage) || 1;
+    const userSearchId = req.query.userSearchId || '';
+    const userSearchName = req.query.userSearchName || '';
+    const quizSearchId = req.query.quizSearchId || '';
+    const quizSearchTitle = req.query.quizSearchTitle || '';
 
     // pending_quiz 테이블에서 대기 퀴즈 전체 조회
     db.query('SELECT * FROM pending_quiz', (err, pendingQuizzes) => {
@@ -31,34 +35,76 @@ router.get('/', async (req, res) => {
             return { ...quiz, questions };
         });
 
+        // 유저 검색 조건 구성
+        let userQuery = 'SELECT id, username, email, role FROM user';
+        let userCountQuery = 'SELECT COUNT(*) as total FROM user';
+        const userParams = [];
+        
+        if (userSearchId || userSearchName) {
+            const conditions = [];
+            if (userSearchId) {
+                conditions.push('id LIKE ?');
+                userParams.push(`%${userSearchId}%`);
+            }
+            if (userSearchName) {
+                conditions.push('username LIKE ?');
+                userParams.push(`%${userSearchName}%`);
+            }
+            const whereClause = conditions.join(' AND ');
+            userQuery += ` WHERE ${whereClause}`;
+            userCountQuery += ` WHERE ${whereClause}`;
+        }
+        
+        userQuery += ' LIMIT ? OFFSET ?';
+        userParams.push(itemsPerPage, (userPage - 1) * itemsPerPage);
+
+        // 퀴즈 검색 조건 구성
+        let quizQuery = 'SELECT id, title, category FROM quiz';
+        let quizCountQuery = 'SELECT COUNT(*) as total FROM quiz';
+        const quizParams = [];
+        
+        if (quizSearchId || quizSearchTitle) {
+            const conditions = [];
+            if (quizSearchId) {
+                conditions.push('id LIKE ?');
+                quizParams.push(`%${quizSearchId}%`);
+            }
+            if (quizSearchTitle) {
+                conditions.push('title LIKE ?');
+                quizParams.push(`%${quizSearchTitle}%`);
+            }
+            const whereClause = conditions.join(' AND ');
+            quizQuery += ` WHERE ${whereClause}`;
+            quizCountQuery += ` WHERE ${whereClause}`;
+        }
+        
+        quizQuery += ' LIMIT ? OFFSET ?';
+        quizParams.push(itemsPerPage, (quizPage - 1) * itemsPerPage);
+
         // 모든 유저 정보 (페이지네이션 적용)
-        const userOffset = (userPage - 1) * itemsPerPage;
-        db.query('SELECT id, username, email, role FROM user LIMIT ? OFFSET ?', 
-            [itemsPerPage, userOffset], (err, users) => {
+        db.query(userQuery, userParams, (err, users) => {
             if (err) return res.send('유저 조회 오류');
 
             // 전체 유저 수 조회
-            db.query('SELECT COUNT(*) as total FROM user', (err, userCountResult) => {
+            db.query(userCountQuery, userParams.slice(0, -2), (err, userCountResult) => {
                 if (err) return res.send('유저 수 조회 오류');
                 const totalUsers = userCountResult[0].total;
                 const totalUserPages = Math.ceil(totalUsers / itemsPerPage);
 
                 // 모든 퀴즈 정보 (페이지네이션 적용)
-                const quizOffset = (quizPage - 1) * itemsPerPage;
-                db.query('SELECT id, title, category FROM quiz LIMIT ? OFFSET ?', 
-                    [itemsPerPage, quizOffset], (err, quizzes) => {
-                if (err) return res.send('퀴즈 조회 오류');
+                db.query(quizQuery, quizParams, (err, quizzes) => {
+                    if (err) return res.send('퀴즈 조회 오류');
 
                     // 전체 퀴즈 수 조회
-                    db.query('SELECT COUNT(*) as total FROM quiz', (err, quizCountResult) => {
+                    db.query(quizCountQuery, quizParams.slice(0, -2), (err, quizCountResult) => {
                         if (err) return res.send('퀴즈 수 조회 오류');
                         const totalQuizzes = quizCountResult[0].total;
                         const totalQuizPages = Math.ceil(totalQuizzes / itemsPerPage);
 
-                res.render('admin', {
-                    user: req.session.user,
-                    pendingQuizzes,
-                    users,
+                        res.render('admin', {
+                            user: req.session.user,
+                            pendingQuizzes,
+                            users,
                             quizzes,
                             userPagination: {
                                 currentPage: userPage,
@@ -68,6 +114,10 @@ router.get('/', async (req, res) => {
                                 currentPage: quizPage,
                                 totalPages: totalQuizPages
                             },
+                            userSearchId,
+                            userSearchName,
+                            quizSearchId,
+                            quizSearchTitle,
                             successMessage: req.query.success || null,
                             error: req.query.error || null
                         });
