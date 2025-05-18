@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const quizRouter = require('./routes/quiz');  // 퀴즈 라우터 추가
+const quizData = require('./data/quizData');  // 퀴즈 데이터 가져오기
 const db = require('./db');
 const adminRouter = require('./routes/admin');
 const { Quiz } = require('./models/Quiz'); // Quiz 모델 import
@@ -49,6 +50,10 @@ db.connect((err) => {
 // EJS 설정
 app.set("view engine", "ejs");
 app.use(express.static("public")); // CSS, 이미지 파일 사용 가능
+
+// public/uploads 폴더를 /uploads 경로로 정적 서빙
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json()); // JSON 파싱 미들웨어 추가
 
