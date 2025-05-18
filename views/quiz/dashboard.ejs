@@ -3,28 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>퀴즈 대시보드</title>
+    <title><%= quiz.title %> - 퀴즈 대시보드</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f5f6fa; font-family: 'Noto Sans KR', sans-serif; }
-        .dashboard-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
-        h2 { color: #4a3b8c; margin-bottom: 24px; }
+        body { background-color: #f5f6fa; font-family: 'Noto Sans KR', sans-serif; padding-top: 20px; padding-bottom: 20px; }
+        .main-content-area { background: #fff; border-radius: 18px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 30px 25px; }
+        .sidebar-area .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .sidebar-area .card-header { background-color: #4a3b8c; color: white; font-weight: bold; border-top-left-radius: 12px; border-top-right-radius: 12px;}
+        h2, h4 { color: #4a3b8c; margin-bottom: 20px; }
         ul { list-style: none; padding: 0; }
-        li { font-size: 20px; margin-bottom: 16px; }
-        .stat-label { color: #888; margin-right: 8px; }
+        li { font-size: 18px; margin-bottom: 12px; }
+        .stat-label { color: #777; margin-right: 8px; }
+        .table { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+        .table th, .table td { vertical-align: middle; text-align: center; font-size: 16px; }
+        .table th { background: #f0f0fa; color: #4a3b8c; font-weight: 600; cursor: pointer; position: relative; }
+        .table th[title]:hover::after, .table td[title]:hover::after { content: attr(title); position: absolute; left: 50%; top: 105%; transform: translateX(-50%); background: #333; color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 13px; white-space: nowrap; z-index: 10; }
+        .table td.rate-high { background: #e6f9e6; color: #1b7e1b; }
+        .table td.rate-mid { background: #fffbe6; color: #bfa100; }
+        .table td.rate-low { background: #ffeaea; color: #d32f2f; }
+        .list-group-item span.badge { font-size: 0.9em;}
+
+        @media (max-width: 991px) { /* lg breakpoint */
+            .main-content-area, .sidebar-area .card { margin-bottom: 20px; }
+        }
+        @media (max-width: 767px) { /* md breakpoint */
+            li { font-size: 16px; }
+            .table th, .table td { font-size: 14px; }
+        }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <h2>전체 통계</h2>
-        <ul>
-            <li><span class="stat-label">응시자 수:</span> <%= stats.total_participants %>명</li>
-            <li><span class="stat-label">평균 맞힌 개수:</span> <%= stats.avg_score !== null && stats.avg_score !== undefined ? Number(stats.avg_score).toFixed(2) : 0 %>개</li>
-            <li><span class="stat-label">최고 맞힌 개수:</span> <%= stats.max_score !== null && stats.max_score !== undefined ? stats.max_score : 0 %>개</li>
-            <li><span class="stat-label">최저 맞힌 개수:</span> <%= stats.min_score !== null && stats.min_score !== undefined ? stats.min_score : 0 %>개</li>
-        </ul>
-        <a href="/quiz/final-result" class="btn btn-primary mt-3">결과 페이지로 돌아가기</a>
-        <a href="/" class="btn btn-secondary mt-3">홈으로</a>
+    <div class="container">
+        <div class="row">
+            <!-- 좌측 메인 콘텐츠 영역 -->
+            <div class="col-lg-8">
+                <div class="main-content-area">
+                    <h2><%= quiz.title %> - 전체 통계</h2>
+                    <ul>
+                        <li><span class="stat-label">응시자 수:</span> <%= stats.total_participants %>명</li>
+                        <li><span class="stat-label">평균 맞힌 개수:</span> <%= stats.avg_score !== null && stats.avg_score !== undefined ? Number(stats.avg_score).toFixed(2) : 0 %>개</li>
+                        <li><span class="stat-label">최고 맞힌 개수:</span> <%= stats.max_score !== null && stats.max_score !== undefined ? stats.max_score : 0 %>개</li>
+                        <li><span class="stat-label">최저 맞힌 개수:</span> <%= stats.min_score !== null && stats.min_score !== undefined ? stats.min_score : 0 %>개</li>
+                    </ul>
+                    <hr>
+                    <h4 style="display: flex; align-items: center; cursor: pointer;" id="toggleStatsBtn">
+                        문제별 정답률
+                        <span id="arrowIcon" style="font-size: 1.2rem; margin-left: 8px;">&#9660;</span>
+                    </h4>
+                    <div id="questionStatsTable" style="display: none;">
+                        <table class="table table-bordered mt-3">
+                            <thead>
+                                <tr>
+                                    <th>문제 내용</th>
+                                    <th style="white-space:nowrap;">
+                                        정답률(%)
+                                        <% if (order === 'rate_desc' || !order) { %>
+                                            <a href="?order=rate_asc&showStats=1" class="btn btn-link btn-sm fw-bold text-decoration-none">&#9650;</a>
+                                        <% } else { %>
+                                            <a href="?order=rate_desc&showStats=1" class="btn btn-link btn-sm fw-bold text-decoration-none">&#9660;</a>
+                                        <% } %>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (stats.questionStats && stats.questionStats.length > 0) { %>
+                                    <% stats.questionStats.forEach(function(q, idx) { %>
+                                        <tr>
+                                            <td class="text-start ps-3"> <%= q.question %> </td>
+                                            <% let rate = Number(q.correct_rate); %>
+                                            <% let rateClass = rate >= 70 ? 'rate-high' : (rate >= 40 ? 'rate-mid' : 'rate-low'); %>
+                                            <td class="<%= rateClass %>"> <%= q.correct_rate %> </td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="2">문제별 정답률 데이터가 없습니다.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/quiz/list/<%= quizId %>" class="btn btn-primary">퀴즈로 돌아가기</a>
+                        <a href="/" class="btn btn-secondary">홈으로</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 우측 사이드바 영역 -->
+            <div class="col-lg-4">
+                <div class="sidebar-area">
+                    <div class="card">
+                        <div class="card-header">🔥 이 퀴즈 랭킹 TOP 5</div>
+                        <ul class="list-group list-group-flush">
+                            <% if (rankings && rankings.length > 0) { %>
+                                <% rankings.forEach(function(rank, index) { %>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <strong class="me-2">#<%= index + 1 %></strong> <%= rank.username %>
+                                        </span>
+                                        <span class="badge bg-success rounded-pill"><%= rank.score %>점</span>
+                                    </li>
+                                <% }); %>
+                            <% } else { %>
+                                <li class="list-group-item">아직 랭킹 정보가 없습니다.</li>
+                            <% } %>
+                        </ul>
+                    </div>
+
+                    <!-- 추천 퀴즈 섹션 -->
+                    <% if (recommendedQuizzes && recommendedQuizzes.length > 0) { %>
+                    <div class="card mt-4">
+                        <div class="card-header">✨ 추천 퀴즈 (같은 카테고리)</div>
+                        <ul class="list-group list-group-flush">
+                            <% recommendedQuizzes.forEach(function(recQuiz) { %>
+                                <li class="list-group-item">
+                                    <a href="/quiz/list/<%= recQuiz.id %>" class="text-decoration-none">
+                                        <% if (recQuiz.thumbnail_url) { %>
+                                            <img src="<%= recQuiz.thumbnail_url %>" alt="<%= recQuiz.title %>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px;">
+                                        <% } %>
+                                        <%= recQuiz.title %>
+                                    </a>
+                                </li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                    <% } %>
+                    <!-- 추천 퀴즈 등 추가 가능 -->
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        const toggleBtn = document.getElementById('toggleStatsBtn');
+        const statsTable = document.getElementById('questionStatsTable');
+        const arrowIcon = document.getElementById('arrowIcon');
+        if (toggleBtn && statsTable && arrowIcon) {
+            toggleBtn.addEventListener('click', function() {
+                if (statsTable.style.display === 'none') {
+                    statsTable.style.display = 'block';
+                    arrowIcon.innerHTML = '&#9650;'; // 위쪽 화살표
+                } else {
+                    statsTable.style.display = 'none';
+                    arrowIcon.innerHTML = '&#9660;'; // 아래쪽 화살표
+                }
+            });
+        }
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('showStats') === '1' && statsTable && arrowIcon) {
+                statsTable.style.display = 'block';
+                arrowIcon.innerHTML = '&#9650;';
+            }
+            // "퀴즈로 돌아가기" 버튼 링크 수정 (기존 final-result에서 해당 퀴즈 상세 페이지로)
+            // 이 부분은 서버사이드에서 quizId를 이미 받고 있으므로, 클라이언트 스크립트에서 할 필요는 없습니다.
+            // a 태그의 href="/quiz/list/<%= quizId %>" 로 이미 설정되어야 합니다.
+            // 확인 결과, 이미 ejs 템플릿에 잘 반영되어 있음.
+        });
+    </script>
 </body>
 </html> 
