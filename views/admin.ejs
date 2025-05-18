@@ -121,6 +121,18 @@
         .option.text-success {
             background: #d4edda;
         }
+
+        .search-form {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-form input {
+            flex: 1;
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
@@ -170,6 +182,14 @@
 
     <div class="section-card users-section">
         <h4>모든 유저 정보</h4>
+        <form action="/admin" method="GET" class="search-form">
+            <input type="text" name="userSearchId" class="form-control" placeholder="유저 ID 검색" value="<%= userSearchId || '' %>">
+            <input type="text" name="userSearchName" class="form-control" placeholder="유저 이름 검색" value="<%= userSearchName || '' %>">
+            <input type="hidden" name="quizPage" value="<%= quizPagination.currentPage %>">
+            <input type="hidden" name="userPage" value="1">
+            <button type="submit" class="btn btn-primary">검색</button>
+            <a href="/admin?userPage=1&quizPage=<%= quizPagination.currentPage %>" class="btn btn-secondary">초기화</a>
+        </form>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -200,6 +220,14 @@
 
     <div class="section-card quizzes-section">
         <h4>모든 퀴즈 정보</h4>
+        <form action="/admin" method="GET" class="search-form">
+            <input type="text" name="quizSearchId" class="form-control" placeholder="퀴즈 ID 검색" value="<%= quizSearchId || '' %>">
+            <input type="text" name="quizSearchTitle" class="form-control" placeholder="퀴즈 제목 검색" value="<%= quizSearchTitle || '' %>">
+            <input type="hidden" name="userPage" value="<%= userPagination.currentPage %>">
+            <input type="hidden" name="quizPage" value="1">
+            <button type="submit" class="btn btn-primary">검색</button>
+            <a href="/admin?userPage=<%= userPagination.currentPage %>&quizPage=1" class="btn btn-secondary">초기화</a>
+        </form>
         <div class="table-responsive">
             <table class="table">
                 <thead>
