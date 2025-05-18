@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자 대시보드</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        .summary-card {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .chart-placeholder {
+            height: 200px;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .review-item {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header text-center">
+            <h1><span role="img" aria-label="home">🏠</span> 사용자 대시보드</h1>
+        </div>
+
+        <!-- 요약 카드 섹션 -->
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="check">✔️</span> 총 응시 퀴즈 수</h5>
+                        <p class="card-text display-4" id="totalQuizzes">12</p>
+                        <p class="card-text"><small class="text-muted">응시한 퀴즈 수</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="chart">📊</span> 평균 점수</h5>
+                        <p class="card-text display-4" id="averageScore">82점</p>
+                        <p class="card-text"><small class="text-muted">전체 평균</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span role="img" aria-label="target">🎯</span> 정답률</h5>
+                        <p class="card-text display-4" id="correctRate">76%</p>
+                        <p class="card-text"><small class="text-muted">총 정답 비율</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 최근 응시 기록 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="calendar">📅</span> 최근 응시 기록</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="thead-light">
+                    <tr>
+                        <th>퀴즈 제목</th>
+                        <th>응시 날짜</th>
+                        <th>점수</th>
+                        <th>정답률</th>
+                        <th>다시 풀기</th>
+                    </tr>
+                </thead>
+                <tbody id="recentAttemptsTable">
+                    <!-- 데이터는 JavaScript로 채워집니다. -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 퀴즈 통계 시각화 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="stats">📊</span> 퀴즈 통계 시각화</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-placeholder">
+                    <p class="text-muted">📈 점수 변화 추이 (Bar Chart)<br>[ Jan ] [ Feb ] [ Mar ] [ Apr ]</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-placeholder">
+                    <p class="text-muted">🥧 카테고리별 성과 (Pie Chart)<br>[IT:40%] [역사:30%] [기타:30%]</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오답 복습 섹션 -->
+        <h2 class="section-title"><span role="img" aria-label="memo">📝</span> 오답 복습 섹션</h2>
+        <div id="wrongAnswersSection">
+            <!-- 데이터는 JavaScript로 채워집니다. -->
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        const totalQuizzesVal = "<%= typeof totalQuizzes !== 'undefined' ? totalQuizzes : 0 %>";
+        const averageScoreVal = "<%= typeof averageScore !== 'undefined' ? averageScore : '0' %>";
+        const correctRateVal = "<%= typeof correctRate !== 'undefined' ? correctRate : '0' %>";   
+
+        const recentAttemptsData = JSON.parse('<%- JSON.stringify(typeof recentAttempts !== "undefined" ? recentAttempts : []) %>');
+        const wrongAnswersData = JSON.parse('<%- JSON.stringify(typeof wrongAnswers !== "undefined" ? wrongAnswers : []) %>');
+        const serverError = "<%= typeof error !== 'undefined' ? error : '' %>";
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (serverError) {
+                const errorDiv = document.createElement('div');
+                errorDiv.classList.add('alert', 'alert-danger');
+                errorDiv.textContent = serverError;
+                document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.dashboard-header').nextSibling);
+            }
+
+            document.getElementById('totalQuizzes').textContent = totalQuizzesVal;
+            document.getElementById('averageScore').textContent = averageScoreVal + "점";
+            document.getElementById('correctRate').textContent = correctRateVal + "%";
+
+            const recentAttemptsTableBody = document.getElementById('recentAttemptsTable');
+            recentAttemptsTableBody.innerHTML = ''; 
+            if (recentAttemptsData.length > 0) {
+                recentAttemptsData.forEach(attempt => {
+                    const row = recentAttemptsTableBody.insertRow();
+                    row.insertCell().textContent = attempt.quizTitle;
+                    row.insertCell().textContent = attempt.attemptDate; 
+                    row.insertCell().textContent = attempt.score + "점 / " + attempt.totalQuestions + "문제";
+                    row.insertCell().textContent = attempt.rate; 
+                    const retryButtonCell = row.insertCell();
+                    const button = document.createElement('button');
+                    button.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+                    button.textContent = '다시 풀기';
+                    button.onclick = function() { location.href = `/quiz/list/${attempt.quizId}`; };
+                    retryButtonCell.appendChild(button);
+                });
+            } else {
+                const row = recentAttemptsTableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.textContent = '최근 응시 기록이 없습니다.';
+                cell.classList.add('text-center');
+            }
+
+            const wrongAnswersDiv = document.getElementById('wrongAnswersSection');
+            wrongAnswersDiv.innerHTML = ''; 
+            if (wrongAnswersData.length > 0) {
+                wrongAnswersData.forEach(item => {
+                    const reviewItemDiv = document.createElement('div');
+                    reviewItemDiv.classList.add('review-item');
+                    const explanationId = `explanation-${item.quizId}-${item.questionId}`; 
+                    reviewItemDiv.innerHTML = `
+                        <h5><span role="img" aria-label="cross mark">❌</span> ${item.quizTitle} - ${item.questionNumber}번 문제</h5>
+                        <p><strong>Q:</strong> ${item.questionText}</p>
+                        <p><strong>내 답변:</strong> <span class="text-danger">${item.myAnswer}</span> / <strong>정답:</strong> <span class="text-success">${item.correctAnswer}</span></p>
+                        <button class="btn btn-sm btn-info" onclick="toggleExplanation('${explanationId}')">해설 보기</button>
+                        <div id="${explanationId}" style="display:none; margin-top:10px; padding:10px; border:1px solid #eee; background-color:#f9f9f9;">
+                            ${item.explanation}
+                        </div>
+                    `; 
+                    wrongAnswersDiv.appendChild(reviewItemDiv);
+                });
+            } else {
+                const noReviewDiv = document.createElement('div');
+                noReviewDiv.classList.add('alert', 'alert-light');
+                noReviewDiv.textContent = '오답 기록이 없습니다. 잘하셨어요!';
+                wrongAnswersDiv.appendChild(noReviewDiv);
+            }
+        });
+
+        function toggleExplanation(elementId) {
+            const explanationDiv = document.getElementById(elementId);
+            if (explanationDiv) {
+                explanationDiv.style.display = explanationDiv.style.display === "none" ? "block" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
