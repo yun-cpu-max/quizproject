@@ -14,7 +14,8 @@ const storage = multer.diskStorage({
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             cb(null, dir);
         } else if (file.fieldname.startsWith('questionImage')) {
-            const dir = path.join(__dirname, '../public/uploads/questions/');
+            // 임시 폴더에 저장
+            const dir = path.join(__dirname, '../public/uploads/temp/');
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             cb(null, dir);
         } else {
@@ -23,12 +24,19 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const userId = req.session.user ? req.session.user.id : 'guest';
-        const timestamp = Date.now();
+        // 모든 문제에 대해 동일한 timestamp 사용 (요청마다 고정)
+        if (!req.session.uploadTimestamp) {
+            req.session.uploadTimestamp = Date.now();
+        }
+        const timestamp = req.session.uploadTimestamp;
         const ext = path.extname(file.originalname);
         if (file.fieldname === 'thumbnailImage') {
             cb(null, `user${userId}_${timestamp}${ext}`);
         } else if (file.fieldname.startsWith('questionImage')) {
-            cb(null, `qimg_${userId}_${timestamp}_${file.originalname}`);
+            // questionImage0, questionImage1 등에서 인덱스 추출
+            const match = file.fieldname.match(/questionImage(\d+)/);
+            const idx = match ? match[1] : '0';
+            cb(null, `qimg_${userId}_${timestamp}_${idx}${ext}`);
         } else {
             cb(new Error('Unknown fieldname: ' + file.fieldname));
         }
@@ -421,7 +429,7 @@ router.get('/dashboard/:quizId', async (req, res) => {
             return res.redirect('/'); 
         }
 
-        const stats = await Quiz.getStatsByQuizId(quizId);
+    const stats = await Quiz.getStatsByQuizId(quizId);
 
         // 정렬 파라미터 처리
         let order = req.query.order || 'rate_desc';

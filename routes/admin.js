@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const path = require('path');
+const fs = require('fs');
 
 // 관리자 페이지
 router.get('/', async (req, res) => {
@@ -190,6 +192,21 @@ router.post('/approve', (req, res) => {
                                 return resolve();
                             }
                         }
+                        // 문제 이미지가 임시 폴더에 있으면 실제 폴더로 이동
+                        let questionImageUrl = q.question_img_url || q.image || null;
+                        if (questionImageUrl && questionImageUrl.startsWith('/uploads/temp/')) {
+                            const fileName = path.basename(questionImageUrl);
+                            const oldPath = path.join(__dirname, '../public', questionImageUrl);
+                            const questionsDir = path.join(__dirname, '../public/uploads/questions/');
+                            if (!fs.existsSync(questionsDir)) fs.mkdirSync(questionsDir, { recursive: true });
+                            const newPath = path.join(questionsDir, fileName);
+                            try {
+                                fs.renameSync(oldPath, newPath);
+                                questionImageUrl = '/uploads/questions/' + fileName;
+                            } catch (e) {
+                                console.error('문제 이미지 이동 실패:', e);
+                            }
+                        }
                         db.query(
                             'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by, question_img_url) VALUES (?, ?, ?, ?, ?, ?)',
                             [
@@ -198,7 +215,7 @@ router.post('/approve', (req, res) => {
                                 q.question_type,
                                 correctAnswer,
                                 q.created_by || quiz.created_by,
-                                q.question_img_url || quiz.thumbnail_url
+                                questionImageUrl // 실제 경로로 저장
                             ],
                             (err, questionResult) => {
                                 if (err) {
