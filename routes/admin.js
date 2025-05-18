@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { ensureAdmin } = require('../middleware/authMiddleware');
 
 // 관리자 페이지
 router.get('/', async (req, res) => {
@@ -262,6 +263,72 @@ router.post('/notice', (req, res) => {
         }
         res.redirect('/notice?success=공지사항이 성공적으로 등록되었습니다.');
     });
+});
+
+// 관리자 대시보드 페이지
+router.get('/dashboard', ensureAdmin, async (req, res) => {
+    try {
+        // 1. 사용자 수 조회
+        const userCountQuery = 'SELECT COUNT(*) AS count FROM user;';
+        // 2. 전체 퀴즈 수 조회 (pending_quiz 제외, 실제 quiz 테이블 기준)
+        const quizCountQuery = 'SELECT COUNT(*) AS count FROM quiz;';
+        // 3. 승인 대기 퀴즈 수 조회
+        const pendingCountQuery = 'SELECT COUNT(*) AS count FROM pending_quiz;'; // status 조건 제거
+        // 4. 주간 평균 응시 (지난 7일간의 quiz_results 수 / 7) - 예시 단순화
+        const weeklyAttemptsQuery = `
+            SELECT COUNT(*) AS count 
+            FROM quiz_results 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY);
+        `;
+        // 5. 승인 대기 퀴즈 목록 (최신순 5개) + 작성자 username
+        const pendingQuizzesQuery = `
+            SELECT pq.*, u.username AS created_by_username 
+            FROM pending_quiz pq
+            LEFT JOIN user u ON pq.created_by = u.id
+            ORDER BY pq.created_at DESC 
+            LIMIT 5;
+        `; // status 조건 제거
+        // 6. 인기 퀴즈 (응시 횟수 기준 TOP 5) - quiz_results 테이블을 quiz_id로 그룹화하여 count
+        const popularQuizzesQuery = `
+            SELECT q.id, q.title, COUNT(qr.id) AS attempt_count
+            FROM quiz q
+            JOIN quiz_results qr ON q.id = qr.quiz_id
+            GROUP BY q.id, q.title
+            ORDER BY attempt_count DESC
+            LIMIT 5;
+        `;
+
+        const [userCountRows, quizCountRows, pendingCountRows, weeklyAttemptsRows, pendingQuizzes, popularQuizzes] = await Promise.all([
+            db.promise().query(userCountQuery),
+            db.promise().query(quizCountQuery),
+            db.promise().query(pendingCountQuery),
+            db.promise().query(weeklyAttemptsQuery),
+            db.promise().query(pendingQuizzesQuery),
+            db.promise().query(popularQuizzesQuery)
+        ]);
+
+        const userCount = userCountRows[0][0].count;
+        const quizCount = quizCountRows[0][0].count;
+        const pendingCount = pendingCountRows[0][0].count;
+        const weeklyTotalAttempts = weeklyAttemptsRows[0][0].count;
+        const weeklyAverageAttempts = weeklyTotalAttempts > 0 ? (weeklyTotalAttempts / 7).toFixed(1) : 0;
+
+        res.render('admin/dashboard_admin', {
+            layout: 'layout_admin', // 관리자용 레이아웃을 사용한다고 가정
+            user: req.user, // 현재 로그인한 관리자 정보
+            userCount,
+            quizCount,
+            pendingCount,
+            weeklyAverageAttempts,
+            pendingQuizzes: pendingQuizzes[0],
+            popularQuizzes: popularQuizzes[0],
+            // 필요한 경우, 실제 통계 그래프용 데이터도 여기에서 준비하여 전달
+        });
+
+    } catch (error) {
+        console.error('관리자 대시보드 데이터 조회 오류:', error);
+        res.status(500).send('서버 오류가 발생했습니다.');
+    }
 });
 
 module.exports = router; 

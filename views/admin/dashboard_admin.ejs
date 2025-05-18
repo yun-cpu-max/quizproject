@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .dashboard-title {
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .summary-card {
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease-in-out;
+        }
+        .summary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,.25);
+        }
+        .summary-card .card-body {
+            padding: 1.5rem;
+        }
+        .summary-card .card-title {
+            font-weight: 500;
+            color: #555;
+            font-size: 1.1rem;
+        }
+        .summary-card .card-text {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        .summary-card .icon {
+            font-size: 2.5rem;
+            color: rgba(0,0,0,0.15);
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .table-wrapper {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .chart-placeholder {
+            min-height: 250px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+            text-align: center;
+            color: #6c757d;
+        }
+        .popular-quizzes .list-group-item {
+            border-left: 0;
+            border-right: 0;
+        }
+        .popular-quizzes .list-group-item:first-child {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border-top: 0;
+        }
+        .popular-quizzes .list-group-item:last-child {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            border-bottom: 0;
+        }
+        .action-btn {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="dashboard-title text-center mb-5"><i class="fas fa-tools"></i> 관리자 대시보드</h1>
+
+        <!-- 요약 카드 섹션 -->
+        <div class="row">
+            <div class="col-lg-3 col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title"> <i class="fas fa-users"></i> 사용자 수</h5>
+                            <p class="card-text"><%= locals.userCount || 0 %></p>
+                        </div>
+                        <div class="icon"><i class="fas fa-users"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title"><i class="fas fa-box-open"></i> 퀴즈 등록 수</h5>
+                            <p class="card-text"><%= locals.quizCount || 0 %></p>
+                        </div>
+                        <div class="icon"><i class="fas fa-box-open"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title"><i class="fas fa-hourglass-half"></i> 승인 대기 수</h5>
+                            <p class="card-text text-warning"><%= locals.pendingCount || 0 %></p>
+                        </div>
+                        <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title"><i class="fas fa-chart-line"></i> 주간 평균 응시</h5>
+                            <p class="card-text"><%= locals.weeklyAverageAttempts || 0 %></p>
+                        </div>
+                        <div class="icon"><i class="fas fa-chart-line"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 퀴즈 승인 요청 리스트 -->
+        <h2 class="section-title"><i class="fas fa-inbox"></i> 퀴즈 승인 요청 리스트</h2>
+        <div class="table-wrapper">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>퀴즈 제목</th>
+                            <th>작성자 ID</th>
+                            <th>제출일자</th>
+                            <th>상태</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (locals.pendingQuizzes && locals.pendingQuizzes.length > 0) { %>
+                            <% locals.pendingQuizzes.forEach(function(quiz) { %>
+                                <tr>
+                                    <td><%= quiz.title %></td>
+                                    <td><%= quiz.created_by_username || quiz.created_by %></td> <!-- 유저네임이 있다면 표시, 없다면 ID -->
+                                    <td><%= new Date(quiz.created_at).toLocaleDateString('ko-KR') %></td>
+                                    <td><span class="badge badge-warning">승인 대기</span></td>
+                                    <td>
+                                        <a href="/admin/quiz/approve/<%= quiz.id %>" class="btn btn-success btn-sm action-btn" title="승인"><i class="fas fa-check"></i></a>
+                                        <a href="/admin/quiz/reject/<%= quiz.id %>" class="btn btn-danger btn-sm action-btn" title="거절"><i class="fas fa-times"></i></a>
+                                        <a href="/admin/quiz/edit/<%= quiz.id %>" class="btn btn-info btn-sm action-btn" title="수정/보기"><i class="fas fa-edit"></i></a>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="text-center">승인 대기 중인 퀴즈가 없습니다.</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 통계 그래프 -->
+        <h2 class="section-title"><i class="fas fa-chart-bar"></i> 통계 그래프</h2>
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="chart-placeholder">
+                    <div>
+                        <h5><i class="fas fa-chart-line"></i> 일간 응시자 수 (Line Chart)</h5>
+                        <p class="small">지난 7일간의 응시자 수 변화를 보여줍니다.</p>
+                        <p>[ 월 ][ 화 ][ 수 ][ 목 ][ 금 ][ 토 ][ 일 ]</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="chart-placeholder">
+                    <div>
+                        <h5><i class="fas fa-chart-pie"></i> 문제 유형 비율 (Pie Chart)</h5>
+                        <p class="small">전체 등록된 문제들의 유형별 비율입니다.</p>
+                        <p>객관식: 70% / 주관식: 25% / 기타: 5%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 인기 퀴즈 -->
+        <h2 class="section-title"><i class="fas fa-fire"></i> 인기 퀴즈</h2>
+        <div class="card popular-quizzes">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-trophy"></i> Top 5 인기 퀴즈 (최다 응시 순)
+            </div>
+            <ul class="list-group list-group-flush">
+                <% if (locals.popularQuizzes && locals.popularQuizzes.length > 0) { %>
+                    <% locals.popularQuizzes.forEach(function(quiz, index) { %>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong>#<%= index + 1 %></strong> <%= quiz.title %></span>
+                            <span class="badge badge-info"><%= quiz.attempt_count || 0 %>회 응시</span>
+                        </li>
+                    <% }); %>
+                <% } else { %>
+                    <li class="list-group-item">아직 인기 퀴즈 데이터가 충분하지 않습니다.</li>
+                <% } %>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html> 
