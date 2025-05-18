@@ -6,38 +6,36 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
-// 썸네일용 storage
-const thumbnailStorage = multer.diskStorage({
+// 커스텀 storage: 필드명에 따라 폴더 분기
+const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const dir = path.join(__dirname, '../public/uploads/thumbnails/');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
+        if (file.fieldname === 'thumbnailImage') {
+            const dir = path.join(__dirname, '../public/uploads/thumbnails/');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        } else if (file.fieldname.startsWith('questionImage')) {
+            const dir = path.join(__dirname, '../public/uploads/questions/');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        } else {
+            cb(new Error('Unknown fieldname: ' + file.fieldname));
+        }
     },
     filename: function (req, file, cb) {
         const userId = req.session.user ? req.session.user.id : 'guest';
         const timestamp = Date.now();
         const ext = path.extname(file.originalname);
-        cb(null, `user${userId}_${timestamp}${ext}`);
+        if (file.fieldname === 'thumbnailImage') {
+            cb(null, `user${userId}_${timestamp}${ext}`);
+        } else if (file.fieldname.startsWith('questionImage')) {
+            cb(null, `qimg_${userId}_${timestamp}_${file.originalname}`);
+        } else {
+            cb(new Error('Unknown fieldname: ' + file.fieldname));
+        }
     }
 });
 
-// 문제 이미지용 storage
-const questionImageStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const dir = path.join(__dirname, '../public/uploads/questions/');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-    },
-    filename: function (req, file, cb) {
-        const userId = req.session.user ? req.session.user.id : 'guest';
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        cb(null, `qimg_${userId}_${timestamp}_${file.originalname}`);
-    }
-});
-
-const uploadThumbnail = multer({ storage: thumbnailStorage, limits: { fileSize: 5 * 1024 * 1024 } });
-const uploadQuestionImage = multer({ storage: questionImageStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // 퀴즈 메인 페이지
 router.get('/', (req, res) => {
@@ -75,33 +73,29 @@ router.get('/create', (req, res) => {
 });
 
 // 퀴즈 생성 처리 (썸네일 + 문제 이미지)
-router.post('/create', uploadThumbnail.single('thumbnailImage'), async (req, res) => {
+router.post('/create', upload.any(), async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     const { title, description, category, questionType, questions, thumbnailType } = req.body;
 
     // 썸네일 처리
     let thumbnailUrl = '';
+    const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnailImage');
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
-    } else if (thumbnailType === 'custom' && req.file) {
-        thumbnailUrl = '/uploads/thumbnails/' + req.file.filename;
+    } else if (thumbnailType === 'custom' && thumbnailFile) {
+        thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
     }
 
     // 문제 이미지 처리 (프론트에서 문제별 이미지 업로드 구현 필요)
     let questionsArr = Object.values(questions).filter(q => q);
-    questionsArr = await Promise.all(questionsArr.map(async (q, idx) => {
-        // 문제 이미지 업로드 처리
-        if (q.imageFile) {
-            // imageFile은 프론트에서 파일 input name을 questionImage0, questionImage1 ... 등으로 넘겨야 함
-            const fileField = `questionImage${idx}`;
-            if (req.files && req.files[fileField] && req.files[fileField][0]) {
-                const file = req.files[fileField][0];
-                q.image = '/uploads/questions/' + file.filename;
-            }
+    questionsArr = questionsArr.map((q, idx) => {
+        const qimg = req.files.find(f => f.fieldname === `questionImage${idx}`);
+        if (qimg) {
+            q.image = '/uploads/questions/' + qimg.filename;
         }
         q.question_type = q.question_type || (questionType === 'choice' ? 'multiple_choice' : 'short_answer');
         return q;
-    }));
+    });
 
     const questionsJson = JSON.stringify(questionsArr);
 
