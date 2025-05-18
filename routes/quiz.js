@@ -322,57 +322,188 @@ router.get('/final-result', async (req, res) => {
         const results = req.session.results || [];
         const totalQuestions = req.session.totalQuestions || results.length;
         const correctCount = results.filter(r => r.isCorrect).length;
+        const userScore = correctCount; // 현재 사용자의 점수
 
-        // 디버깅: 세션 상태 로그
-        console.log('[FINAL-RESULT] resultSaved:', req.session.resultSaved, '| results.length:', results.length, '| correctCount:', correctCount);
+        // 정답률 계산
+        const accuracy = totalQuestions > 0 ? parseFloat(((correctCount / totalQuestions) * 100).toFixed(1)) : 0;
 
-        // 상위 % 계산 예시 (실제 통계는 추가 쿼리 필요)
-        const percentage = Math.round((correctCount / totalQuestions) * 100);
+        let rankingPercentage = 100; // 기본값 (예: 데이터 부족 시)
+        let displayMessage = "결과를 계산 중입니다..."; // 기본 메시지
+
+        if (quizId && totalQuestions > 0) {
+            const countStrictlyHigherQuery = `
+                SELECT COUNT(*) AS count
+                FROM quiz_results
+                WHERE quiz_id = ? AND total_questions = ? AND score > ?;
+            `;
+            const totalEligibleAttemptsQuery = `
+                SELECT COUNT(*) AS count
+                FROM quiz_results
+                WHERE quiz_id = ? AND total_questions = ?;
+            `;
+
+            // Promise를 사용하여 두 쿼리를 병렬로 실행
+            const [higherResults, totalResults] = await Promise.all([
+                new Promise((resolve, reject) => {
+                    db.query(countStrictlyHigherQuery, [quizId, totalQuestions, userScore], (err, rows) => {
+                        if (err) return reject(err);
+                        resolve(rows[0].count);
+                    });
+                }),
+                new Promise((resolve, reject) => {
+                    db.query(totalEligibleAttemptsQuery, [quizId, totalQuestions], (err, rows) => {
+                        if (err) return reject(err);
+                        resolve(rows[0].count);
+                    });
+                })
+            ]);
+
+            const countStrictlyHigher = higherResults;
+            const totalEligibleAttempts = totalResults;
+
+            if (totalEligibleAttempts > 0) {
+                // (나보다 잘한 사람 수 + 1) / 전체 시도자 수 * 100
+                // 이 값은 작을수록 높은 순위
+                rankingPercentage = ((countStrictlyHigher + 1) / totalEligibleAttempts) * 100;
+                if (rankingPercentage > 100) rankingPercentage = 100; // 100%를 넘지 않도록
+                if (rankingPercentage < 1 && totalEligibleAttempts > 0) rankingPercentage = 1; // 0%가 되지 않도록 (최소 상위 1%)
+                
+                // 메시지 예시 (템플릿에서 더 가공 가능)
+                if (totalEligibleAttempts === 1 && countStrictlyHigher === 0) {
+                    displayMessage = "첫 번째 도전자입니다! 멋진 시작이에요!";
+                    rankingPercentage = 1; // 첫 도전자는 상위 1%로 표시 (또는 100% 중 원하는 방향으로)
+                } else if (countStrictlyHigher === 0) {
+                    displayMessage = "최상위권입니다! 정말 대단해요!";
+                    rankingPercentage = 1; // 최고점은 상위 1%로 표시
+                } else {
+                    displayMessage = `상위 ${Math.ceil(rankingPercentage)}%의 성적입니다!`; 
+                }
+            } else {
+                displayMessage = "아직 이 조건으로 퀴즈를 푼 사용자가 충분하지 않아 순위를 계산할 수 없습니다.";
+                rankingPercentage = null; // 순위 계산 불가
+            }
+        } else {
+            displayMessage = "퀴즈 정보가 부족하여 순위를 계산할 수 없습니다.";
+            rankingPercentage = null;
+        }
 
         res.render('quiz/final-result', {
             user: user,
             results: {
                 correctCount,
-                totalQuizzes: totalQuestions,
-                percentage
+                totalQuizzes: totalQuestions, // 변수명 일관성 (totalQuestions)
+                accuracy: accuracy, // 추가된 정답률
+                percentage: rankingPercentage, // 새로 계산된 순위 백분율
+                displayMessage: displayMessage   // 추가 메시지
             },
             quizId
         });
     } catch (error) {
         console.error('최종 결과 처리 에러:', error);
-        res.redirect('/');
+        // 오류 발생 시 기본값으로 렌더링, 사용자에게 오류 안내
+        res.render('quiz/final-result', {
+            user: req.session.user,
+            results: {
+                correctCount: (req.session.results || []).filter(r => r.isCorrect).length,
+                totalQuizzes: req.session.totalQuestions || (req.session.results || []).length,
+                accuracy: 0, // 오류 시 정답률 0
+                percentage: null, // 오류 시 순위 없음
+                displayMessage: "결과를 불러오는 중 오류가 발생했습니다."
+            },
+            quizId: req.session.quizId,
+            error: "결과 처리 중 오류가 발생했습니다."
+        });
     }
 });
 
 // 대시보드(전체 통계) 라우트
 router.get('/dashboard/:quizId', async (req, res) => {
     const quizId = parseInt(req.params.quizId);
-    const stats = await Quiz.getStatsByQuizId(quizId);
-
-    // 정렬 파라미터 처리
-    let order = req.query.order || 'id_asc';
-    let orderBy = 'qr.question_id ASC';
-    if (order === 'id_desc') orderBy = 'qr.question_id DESC';
-    if (order === 'rate_asc') orderBy = 'correct_rate ASC';
-    if (order === 'rate_desc') orderBy = 'correct_rate DESC';
-
-    // 문제별 정답률 + 문제 내용 조인 쿼리
-    db.query(
-        `SELECT qr.question_id, q.question, 
-                COUNT(*) AS total, 
-                SUM(qr.is_correct) AS correct, 
-                ROUND(SUM(qr.is_correct)/COUNT(*)*100,1) AS correct_rate
-           FROM question_responses qr
-           JOIN question q ON qr.question_id = q.id
-          WHERE qr.quiz_id = ?
-       GROUP BY qr.question_id, q.question
-       ORDER BY ${orderBy}`,
-        [quizId],
-        (err, questionStats) => {
-            stats.questionStats = questionStats || [];
-            res.render('quiz/dashboard', { stats, quizId, order });
+    
+    try {
+        const quiz = await Quiz.getById(quizId); // 퀴즈 정보 조회
+        if (!quiz) {
+            // 퀴즈를 찾을 수 없는 경우, 적절한 에러 처리 또는 리다이렉션
+            return res.redirect('/'); 
         }
-    );
+
+        const stats = await Quiz.getStatsByQuizId(quizId);
+
+        // 정렬 파라미터 처리
+        let order = req.query.order || 'rate_desc';
+        let orderBy = 'correct_rate DESC, qr.question_id ASC';
+        if (order === 'id_asc') orderBy = 'qr.question_id ASC';
+        if (order === 'id_desc') orderBy = 'qr.question_id DESC';
+        if (order === 'rate_asc') orderBy = 'correct_rate ASC, qr.question_id ASC';
+
+        // 랭킹 데이터 조회 (상위 5명)
+        const rankingQuery = `
+            SELECT u.username, qr.score
+            FROM quiz_results qr
+            JOIN user u ON qr.user_id = u.id
+            WHERE qr.quiz_id = ?
+            ORDER BY qr.score DESC, qr.created_at ASC
+            LIMIT 5;
+        `;
+
+        // 추천 퀴즈 조회 (동일 카테고리, 최신 3개, 현재 퀴즈 제외)
+        const recommendedQuizzesQuery = `
+            SELECT id, title, thumbnail_url
+            FROM quiz
+            WHERE category = ? AND id != ?
+            ORDER BY created_at DESC
+            LIMIT 3;
+        `;
+
+        const [questionStats, rankings, recommendedQuizzes] = await Promise.all([
+            new Promise((resolve, reject) => {
+                db.query(
+                    `SELECT qr.question_id, q.question, 
+                            COUNT(*) AS total, 
+                            SUM(qr.is_correct) AS correct, 
+                            ROUND(SUM(qr.is_correct)/COUNT(*)*100,1) AS correct_rate
+                       FROM question_responses qr
+                       JOIN question q ON qr.question_id = q.id
+                      WHERE qr.quiz_id = ?
+                   GROUP BY qr.question_id, q.question
+                   ORDER BY ${orderBy}`,
+                    [quizId],
+                    (err, results) => {
+                        if (err) return reject(err);
+                        resolve(results || []);
+                    }
+                );
+            }),
+            new Promise((resolve, reject) => {
+                db.query(rankingQuery, [quizId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results || []);
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(recommendedQuizzesQuery, [quiz.category, quizId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results || []);
+                });
+            })
+        ]);
+
+        stats.questionStats = questionStats;
+
+        res.render('quiz/dashboard', { 
+            quiz: quiz,
+            stats, 
+            rankings,
+            recommendedQuizzes, // 추천 퀴즈 정보 전달
+            quizId, 
+            order 
+        });
+
+    } catch (error) {
+        console.error("대시보드 데이터 조회 오류:", error);
+        // 오류 발생 시 사용자에게 알림 또는 기본 페이지로 리다이렉션
+        res.status(500).send("데이터를 불러오는 중 오류가 발생했습니다.");
+    }
 });
 
 // 사용자별 퀴즈 대시보드 (나의 퀴즈 활동 페이지)

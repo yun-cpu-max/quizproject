@@ -143,11 +143,11 @@
         
         <div class="result-count">
             <%= results.correctCount %> / <%= results.totalQuizzes %>개 정답<br>
-            정답률: <%= results.percentage %>%
+            정답률: <%= results.accuracy.toFixed(2) %>%
         </div>
 
         <div class="stats-container">
-            <div class="percentage-text">상위 <%= results.percentage %>%</div>
+            <div class="percentage-text">상위 <%= results.percentage ? results.percentage.toFixed(2) : 'N/A' %>%</div>
             <div class="percentage-label">전체 사용자 중 당신의 위치</div>
             
             <div class="gauge-container">
@@ -166,7 +166,7 @@
     <script>
         // 페이지 로드 시 게이지 애니메이션 효과
         document.addEventListener('DOMContentLoaded', function() {
-            const percentage = Number('<%- results.percentage %>');
+            const percentage = Number('<%- results.percentage || 0 %>');
             const fillWidth = 100 - percentage;
             
             const gaugeFill = document.querySelector('.gauge-fill');
