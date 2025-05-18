@@ -133,7 +133,6 @@ router.get('/play/:id', async (req, res) => {
         const count = parseInt(req.query.count) || 10;
         const reset = req.query.reset === '1';
 
-        // DB에서 퀴즈 정보 및 문제, 선택지 불러오기
         const quiz = await Quiz.getById(quizId);
         if (!quiz) {
             throw new Error('퀴즈를 찾을 수 없습니다.');
@@ -151,12 +150,10 @@ router.get('/play/:id', async (req, res) => {
             questions = [];
         }
 
-        // reset 파라미터가 있거나, 기존 조건에 해당하면 세션 초기화
         if (reset || !req.session.quizId || req.session.quizId !== quizId || !req.session.questionOrder || req.session.totalQuestions !== count) {
             req.session.quizId = quizId;
             req.session.currentQuestion = 1;
             req.session.totalQuestions = Math.min(count, questions.length);
-            // 문제 id 배열을 랜덤하게 섞어서 세션에 저장
             const questionIds = questions.map(q => q.id);
             for (let i = questionIds.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -164,7 +161,7 @@ router.get('/play/:id', async (req, res) => {
             }
             req.session.questionOrder = questionIds.slice(0, req.session.totalQuestions);
             req.session.results = [];
-            req.session.resultSaved = false; // 결과 저장 플래그 초기화
+            req.session.resultSaved = false; 
         }
 
         const currentQuestionNum = req.session.currentQuestion;
@@ -172,16 +169,22 @@ router.get('/play/:id', async (req, res) => {
             return res.redirect('/quiz/final-result');
         }
 
-        // 세션의 랜덤 문제 id 배열에서 현재 문제 id를 가져옴
         const currentQuestionId = req.session.questionOrder[currentQuestionNum - 1];
         const currentQuestion = questions.find(q => q.id === currentQuestionId);
         if (!currentQuestion) {
             throw new Error('문제를 찾을 수 없습니다.');
         }
 
+        let imagePath = "/rogo.png"; // 기본값
+        if (currentQuestion.question_img_url) {
+            imagePath = currentQuestion.question_img_url;
+        } else if (quiz.thumbnail_url) {
+            imagePath = quiz.thumbnail_url;
+        }
+
         const quizPlayData = {
             quizId: quizId,
-            questionImage: "/rogo.png",
+            questionImage: imagePath, // 수정된 이미지 경로 사용
             questionText: currentQuestion.question,
             totalQuestions: req.session.totalQuestions,
             currentQuestion: currentQuestionNum,
@@ -196,7 +199,7 @@ router.get('/play/:id', async (req, res) => {
             return res.render('quiz/choice-play', { ...quizPlayData, user: req.session.user });
         }
 
-        res.render('quiz/play', quizPlayData);
+        res.render('quiz/play', { ...quizPlayData, user: req.session.user });
     } catch (error) {
         console.error('퀴즈 플레이 페이지 에러:', error);
         res.redirect('/');

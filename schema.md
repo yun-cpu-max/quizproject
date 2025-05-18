@@ -24,6 +24,7 @@
 - question_type VARCHAR(255)
 - correct_answer TEXT
 - created_by INT (FK → user.id)
+- question_img_url VARCHAR(255) NULL
 
 ## question_option
 - id INT (PK)
