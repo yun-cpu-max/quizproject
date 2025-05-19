@@ -158,9 +158,25 @@ router.post('/approve', (req, res) => {
         }
 
         // 1. quiz 테이블에 저장
+        // 썸네일이 temp 폴더에 있으면 thumbnails 폴더로 이동
+        let thumbnailUrl = quiz.thumbnail_url;
+        if (thumbnailUrl && thumbnailUrl.startsWith('/uploads/temp/')) {
+            const fileName = path.basename(thumbnailUrl);
+            const oldPath = path.join(__dirname, '../public', thumbnailUrl.replace(/\//g, path.sep));
+            const thumbnailsDir = path.join(__dirname, '../public/uploads/thumbnails/');
+            if (!fs.existsSync(thumbnailsDir)) fs.mkdirSync(thumbnailsDir, { recursive: true });
+            const newPath = path.join(thumbnailsDir, fileName);
+            try {
+                fs.copyFileSync(oldPath, newPath);
+                fs.unlinkSync(oldPath);
+                thumbnailUrl = '/uploads/thumbnails/' + fileName;
+            } catch (e) {
+                console.error('썸네일 이미지 이동 실패:', e);
+            }
+        }
         db.query(
             'INSERT INTO quiz (category, title, description, thumbnail_url, created_by) VALUES (?, ?, ?, ?, ?)',
-            [quiz.category, quiz.title, quiz.description, quiz.thumbnail_url, quiz.created_by],
+            [quiz.category, quiz.title, quiz.description, thumbnailUrl, quiz.created_by],
             (err, result) => {
                 if (err) {
                     console.error('퀴즈 저장 오류:', err);
@@ -196,12 +212,13 @@ router.post('/approve', (req, res) => {
                         let questionImageUrl = q.question_img_url || q.image || null;
                         if (questionImageUrl && questionImageUrl.startsWith('/uploads/temp/')) {
                             const fileName = path.basename(questionImageUrl);
-                            const oldPath = path.join(__dirname, '../public', questionImageUrl);
+                            const oldPath = path.join(__dirname, '../public', questionImageUrl.replace(/\//g, path.sep));
                             const questionsDir = path.join(__dirname, '../public/uploads/questions/');
                             if (!fs.existsSync(questionsDir)) fs.mkdirSync(questionsDir, { recursive: true });
                             const newPath = path.join(questionsDir, fileName);
                             try {
-                                fs.renameSync(oldPath, newPath);
+                                fs.copyFileSync(oldPath, newPath);
+                                fs.unlinkSync(oldPath);
                                 questionImageUrl = '/uploads/questions/' + fileName;
                             } catch (e) {
                                 console.error('문제 이미지 이동 실패:', e);
@@ -261,8 +278,47 @@ router.post('/reject', (req, res) => {
         return res.redirect('/');
     }
     const id = parseInt(req.body.idx);
-    db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
-        res.redirect('/admin');
+
+    // 1. pending_quiz에서 해당 퀴즈 데이터 조회
+    db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], (err, results) => {
+        if (err || results.length === 0) {
+            db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
+                return res.redirect('/admin');
+            });
+            return;
+        }
+        const quiz = results[0];
+
+        // 2. 문제 이미지 삭제
+        let questions = [];
+        try {
+            questions = typeof quiz.questions === 'string' ? JSON.parse(quiz.questions) : quiz.questions;
+            if (!Array.isArray(questions)) questions = [];
+        } catch (e) {
+            questions = [];
+        }
+        questions.forEach(q => {
+            const imgUrl = q.question_img_url || q.image;
+            if (imgUrl && imgUrl.startsWith('/uploads/temp/')) {
+                const filePath = path.join(__dirname, '../public', imgUrl.replace(/\//g, path.sep));
+                if (fs.existsSync(filePath)) {
+                    try { fs.unlinkSync(filePath); } catch (e) { }
+                }
+            }
+        });
+
+        // 3. 썸네일 이미지 삭제 (임시폴더에 있을 때만)
+        if (quiz.thumbnail_url && quiz.thumbnail_url.startsWith('/uploads/temp/')) {
+            const thumbPath = path.join(__dirname, '../public', quiz.thumbnail_url.replace(/\//g, path.sep));
+            if (fs.existsSync(thumbPath)) {
+                try { fs.unlinkSync(thumbPath); } catch (e) { }
+            }
+        }
+
+        // 4. DB에서 삭제
+        db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
+            res.redirect('/admin');
+        });
     });
 });
 
