@@ -577,6 +577,36 @@ router.get('/dashboard_user', async (req, res) => {
             LIMIT 5;
         `;
 
+        // 5. 카테고리별 응시 횟수 (차트용)
+        const categoryChartQuery = `
+            SELECT
+                q.category,
+                COUNT(qr.id) AS attemptCount
+            FROM
+                quiz_results qr
+            INNER JOIN
+                quiz q ON qr.quiz_id = q.id
+            WHERE
+                qr.user_id = ?
+            GROUP BY
+                q.category;
+        `;
+
+        // 6. 월별 응시 횟수 (차트용)
+        const monthlyChartQuery = `
+            SELECT
+                DATE_FORMAT(qr.created_at, '%Y-%m') AS attemptMonth,
+                COUNT(qr.id) AS attemptCount
+            FROM
+                quiz_results qr
+            WHERE
+                qr.user_id = ?
+            GROUP BY
+                attemptMonth
+            ORDER BY
+                attemptMonth ASC;
+        `;
+
         const promises = [
             new Promise((resolve, reject) => {
                 db.query(totalQuizzesQuery, [userId], (err, results) => {
@@ -604,7 +634,7 @@ router.get('/dashboard_user', async (req, res) => {
             new Promise((resolve, reject) => { // Promise for wrongAnswers
                 db.query(wrongAnswersQuery, [userId], (err, wrongAnswerItems) => {
                     if (err) return reject(err);
-                    if (wrongAnswerItems.length === 0) return resolve([]);
+                    if (!wrongAnswerItems || wrongAnswerItems.length === 0) return resolve([]);
 
                     const multipleChoiceItems = wrongAnswerItems.filter(item => item.questionType === 'multiple_choice');
                     
@@ -628,7 +658,7 @@ router.get('/dashboard_user', async (req, res) => {
                             db.query(correctOptionsQuery, [multipleChoiceQuestionIds], (optErr, correctOptions) => {
                                 if (optErr) {
                                     console.error("Error fetching correct options for wrong answers:", optErr);
-                                } else {
+                                } else if (correctOptions){
                                     correctOptions.forEach(opt => {
                                         correctOptionsMap[opt.question_id] = opt.option_text;
                                     });
@@ -648,7 +678,7 @@ router.get('/dashboard_user', async (req, res) => {
                             db.query(userAnswerTextsQuery, [userAnswerOptionIds], (optErr, userAnswerOptions) => {
                                 if (optErr) {
                                     console.error("Error fetching user answer option texts:", optErr);
-                                } else {
+                                } else if (userAnswerOptions){
                                     userAnswerOptions.forEach(opt => {
                                         userAnswerTextsMap[opt.id] = opt.option_text;
                                     });
@@ -675,7 +705,7 @@ router.get('/dashboard_user', async (req, res) => {
                                 questionText: item.questionText,
                                 myAnswer: myAnswerDisplay, 
                                 correctAnswer: correctAnswerDisplay,
-                                explanation: "해설이 제공되지 않는 문제입니다.",
+                                explanation: "해설이 제공되지 않는 문제입니다.", // 기본 해설
                                 quizId: item.quizId,
                                 questionId: item.questionId
                             };
@@ -683,23 +713,53 @@ router.get('/dashboard_user', async (req, res) => {
                         resolve(formattedResults);
                     }).catch(detailErr => {
                         console.error("Error in Promise.all for detail fetching:", detailErr);
-                        const fallbackResults = wrongAnswerItems.map(item => ({
+                        const fallbackResults = wrongAnswerItems.map(item => ({ // 폴백 데이터 매핑
                             quizTitle: item.quizTitle,
                             questionNumber: item.questionNumber,
                             questionText: item.questionText,
                             myAnswer: item.myAnswer, 
                             correctAnswer: item.subjectiveCorrectAnswer, 
-                            explanation: "해설이 제공되지 않는 문제입니다.",
+                            explanation: "해설 정보를 불러오는데 실패했습니다.",
                             quizId: item.quizId,
                             questionId: item.questionId
                         }));
                         resolve(fallbackResults); 
                     });
                 });
+            }),
+            // 차트 데이터용 Promise 추가
+            new Promise((resolve, reject) => {
+                db.query(categoryChartQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve({
+                        labels: results.map(row => row.category),
+                        data: results.map(row => row.attemptCount)
+                    });
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(monthlyChartQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+                    resolve({
+                        labels: results.map(row => {
+                            const monthIndex = parseInt(row.attemptMonth.substring(5, 7), 10) - 1;
+                            return monthNames[monthIndex];
+                        }),
+                        data: results.map(row => row.attemptCount)
+                    });
+                });
             })
         ];
-
-        const [totalQuizzes, overallStats, recentAttempts, wrongAnswers] = await Promise.all(promises);
+        
+        const [
+            totalQuizzes, 
+            overallStats, 
+            recentAttempts, 
+            wrongAnswers, 
+            categoryChartData, 
+            monthlyChartData
+        ] = await Promise.all(promises);
 
         res.render('quiz/dashboard_user', {
             user: req.session.user,
@@ -707,7 +767,10 @@ router.get('/dashboard_user', async (req, res) => {
             averageScore: parseFloat(overallStats.averageScore).toFixed(1),
             correctRate: parseFloat(overallStats.correctRate).toFixed(1),
             recentAttempts: recentAttempts,
-            wrongAnswers: wrongAnswers
+            wrongAnswers: wrongAnswers,
+            categoryChartData: categoryChartData,
+            monthlyChartData: monthlyChartData,
+            error: null
         });
 
     } catch (error) {
@@ -719,6 +782,8 @@ router.get('/dashboard_user', async (req, res) => {
             correctRate: '0',
             recentAttempts: [],
             wrongAnswers: [],
+            categoryChartData: { labels: [], data: [] },
+            monthlyChartData: { labels: [], data: [] },
             error: "데이터를 불러오는 중 오류가 발생했습니다."
         });
     }
