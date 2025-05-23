@@ -285,14 +285,24 @@
         <!-- 퀴즈 통계 시각화 섹션 -->
         <h2 class="section-title"><span role="img" aria-label="stats">📊</span> 퀴즈 통계 시각화</h2>
         <div class="row">
-            <div class="col-md-6">
-                <div class="chart-placeholder">
-                    <p class="text-muted">📈 점수 변화 추이 (Bar Chart)<br>[ Jan ] [ Feb ] [ Mar ] [ Apr ]</p>
+            <div class="col-md-6 mb-4">
+                <div class="card summary-card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-center mb-3">카테고리별 응시 횟수</h5>
+                        <div class="chart-container" style="position: relative; height:300px; width:100%;">
+                            <canvas id="categoryAttemptsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="chart-placeholder">
-                    <p class="text-muted">🥧 카테고리별 성과 (Pie Chart)<br>[IT:40%] [역사:30%] [기타:30%]</p>
+            <div class="col-md-6 mb-4">
+                <div class="card summary-card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-center mb-3">월별 응시 횟수</h5>
+                        <div class="chart-container" style="position: relative; height:300px; width:100%;">
+                            <canvas id="monthlyAttemptsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -304,9 +314,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         const totalQuizzesVal = "<%= typeof totalQuizzes !== 'undefined' ? totalQuizzes : 0 %>";
         const averageScoreVal = "<%= typeof averageScore !== 'undefined' ? averageScore : '0' %>";
@@ -315,6 +325,10 @@
         const recentAttemptsData = JSON.parse('<%- JSON.stringify(typeof recentAttempts !== "undefined" ? recentAttempts : []) %>');
         const wrongAnswersData = JSON.parse('<%- JSON.stringify(typeof wrongAnswers !== "undefined" ? wrongAnswers : []) %>');
         const serverError = "<%= typeof error !== 'undefined' ? error : '' %>";
+
+        // 서버로부터 전달받을 차트 데이터 (백엔드에서 이 형식으로 전달 필요)
+        const categoryChartData = JSON.parse('<%- JSON.stringify(typeof categoryChartData !== "undefined" ? categoryChartData : {labels: [], data: []}) %>');
+        const monthlyChartData = JSON.parse('<%- JSON.stringify(typeof monthlyChartData !== "undefined" ? monthlyChartData : {labels: [], data: []}) %>');
 
         document.addEventListener('DOMContentLoaded', function () {
             if (serverError) {
@@ -375,6 +389,88 @@
                 noReviewDiv.classList.add('alert', 'alert-light');
                 noReviewDiv.textContent = '오답 기록이 없습니다. 잘하셨어요!';
                 wrongAnswersDiv.appendChild(noReviewDiv);
+            }
+
+            // 카테고리별 응시 횟수 차트 (Pie Chart)
+            const categoryCtx = document.getElementById('categoryAttemptsChart');
+            if (categoryCtx && categoryChartData.labels && categoryChartData.labels.length > 0) {
+                new Chart(categoryCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: categoryChartData.labels,
+                        datasets: [{
+                            label: '카테고리별 응시 횟수',
+                            data: categoryChartData.data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(199, 199, 199, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)',
+                                'rgba(199, 199, 199, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            } else if (categoryCtx) {
+                categoryCtx.getContext('2d').fillText('카테고리별 응시 데이터가 없습니다.', 10, 50);
+            }
+
+            // 월별 응시 횟수 차트 (Bar Chart)
+            const monthlyCtx = document.getElementById('monthlyAttemptsChart');
+            if (monthlyCtx && monthlyChartData.labels && monthlyChartData.labels.length > 0) {
+                new Chart(monthlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthlyChartData.labels,
+                        datasets: [{
+                            label: '월별 응시 횟수',
+                            data: monthlyChartData.data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1 // 정수 단위로 y축 표시
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            } else if (monthlyCtx) {
+                monthlyCtx.getContext('2d').fillText('월별 응시 데이터가 없습니다.', 10, 50);
             }
         });
 
