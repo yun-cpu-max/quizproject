@@ -113,7 +113,7 @@ body {
 /* 이미지 카드 스타일 */
 .image-card {
     width: 260px;      /* 카드 너비 고정 */
-    height: 340px;     /* 카드 높이 고정 */
+    height: 360px;     /* 카드 높이 고정 */
     display: flex;
     flex-direction: column;
     border-radius: 20px;
@@ -346,4 +346,29 @@ body {
     background: #7a2fe6;
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(140, 59, 255, 0.3);
+}
+
+/* 카드 내 링크 밑줄 제거 */
+.image-card a,
+.image-card a:visited,
+.image-card a:hover,
+.image-card a:active {
+    text-decoration: none;
+    color: inherit;
+}
+.image-card-link,
+.image-card-link:visited,
+.image-card-link:hover,
+.image-card-link:active {
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+.category-badge {
+    font-size: 0.95rem;
+    padding: 0.45em 1em;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    opacity: 0.95;
+    letter-spacing: 0.02em;
 }
