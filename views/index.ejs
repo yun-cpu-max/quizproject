@@ -249,6 +249,64 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
         }
+        /* 카드 스타일 추가 */
+        .image-card {
+            height: 400px; /* 예시: 카드의 전체 높이를 고정합니다. 필요에 따라 조절하세요. */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* 컨텐츠를 위 아래로 분산 */
+            overflow: hidden; /* 카드를 벗어나는 내용 숨김 */
+        }
+
+        .image-card .image-container {
+            width: 100%;
+            height: 200px; /* 예시: 이미지 컨테이너의 높이를 고정합니다. */
+            overflow: hidden; /* 이미지가 컨테이너를 벗어나지 않도록 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-card .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 이미지가 비율을 유지하면서 컨테이너를 채우도록 */
+        }
+
+        .image-card .image-info {
+            padding: 1rem;
+            flex-grow: 1; /* 남은 공간을 채우도록 함 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* 제목과 설명 사이 공간 확보 */
+        }
+
+        .image-card .card-title {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            /* 한 줄 초과 시 말줄임표 (선택 사항) */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .image-card .card-text {
+            font-size: 0.9rem;
+            line-height: 1.5; /* 줄간격 */
+            color: #555;
+            /* 두 줄 제한 및 말줄임표 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* 보여줄 줄 수 */
+            -webkit-box-orient: vertical;
+            /* 항상 두 줄 높이를 차지하도록 설정 */
+            min-height: calc(1.5em * 2); /* line-height * 줄 수 (em 단위로 폰트 크기 비례) */
+            height: calc(1.5em * 2); /* line-height * 줄 수 (em 단위로 폰트 크기 비례) */
+            margin-bottom: 0; /* 하단 여백 제거 */
+        }
+        /* 카드 스타일 끝 */
     </style>
 </head>
 <body>

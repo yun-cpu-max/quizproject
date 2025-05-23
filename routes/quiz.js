@@ -165,20 +165,36 @@ router.get('/play/:id', async (req, res) => {
 
         const currentQuestionId = req.session.questionOrder[currentQuestionNum - 1];
         const currentQuestion = questions.find(q => q.id === currentQuestionId);
+        
         if (!currentQuestion) {
-            throw new Error('문제를 찾을 수 없습니다.');
+            throw new Error('현재 질문 객체를 찾을 수 없습니다. questions 배열이나 ID를 확인하세요.');
         }
 
-        let imagePath = "/rogo.png"; // 기본값
+        // 이미지 경로 결정 로직
+        let determinedImagePath = null;
+        const defaultImage = "/rogo.png";
+        const questionImageBase = "/uploads/questions/";
+        const thumbnailImageBase = "/uploads/thumbnails/";
+
         if (currentQuestion.question_img_url) {
-            imagePath = currentQuestion.question_img_url;
+            if (currentQuestion.question_img_url.startsWith('/')) {
+                determinedImagePath = currentQuestion.question_img_url;
+            } else {
+                determinedImagePath = path.posix.join(questionImageBase, currentQuestion.question_img_url);
+            }
         } else if (quiz.thumbnail_url) {
-            imagePath = quiz.thumbnail_url;
+            if (quiz.thumbnail_url.startsWith('/')) {
+                determinedImagePath = quiz.thumbnail_url;
+            } else {
+                determinedImagePath = path.posix.join(thumbnailImageBase, quiz.thumbnail_url);
+            }
         }
+
+        const imagePath = determinedImagePath || defaultImage;
 
         const quizPlayData = {
             quizId: quizId,
-            questionImage: imagePath, // 수정된 이미지 경로 사용
+            questionImage: imagePath,
             questionText: currentQuestion.question,
             totalQuestions: req.session.totalQuestions,
             currentQuestion: currentQuestionNum,
