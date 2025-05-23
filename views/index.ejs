@@ -161,17 +161,21 @@
             top: 0;
             z-index: 1100;
             transition: all 0.3s ease;
+            min-height: 56px;
         }
         .navbar-brand {
-            padding: 0.5rem 1rem;
-            transition: all 0.3s ease;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
         }
         .navbar-brand:hover {
             transform: scale(1.05);
         }
         .navbar-brand .logo {
-            width: 40px;
-            height: auto;
+            height: 100%;
+            width: auto;
+            display: block;
         }
         .nav-link {
             font-size: 1.1rem !important;
@@ -379,8 +383,11 @@
         <% images.forEach(img => { %>
                     <a href="/quiz/list/<%= img.id %>" class="image-card-link">
                 <div class="image-card">
-                    <div class="image-container">
-                                <img src="<%= img.thumbnail_url || '/uploads/thumbnails/rogo.png' %>" alt="<%= img.title %>" class="card-img-top">
+                    <div class="image-container" style="position: relative;">
+                        <img src="<%= img.thumbnail_url || '/uploads/thumbnails/rogo.png' %>" alt="<%= img.title %>" class="card-img-top">
+                        <span class="badge bg-primary category-badge" style="position: absolute; top: 12px; right: 12px; z-index: 2;">
+                            <%= img.category %>
+                        </span>
                     </div>
                     <div class="image-info">
                         <h3 class="card-title"><%= img.title %></h3>

@@ -84,6 +84,14 @@
             height: 40px;
             width: auto;
         }
+
+        .category-badge {
+            font-size: 1rem;
+            padding: 0.5em 1.2em;
+            border-radius: 999px;
+            opacity: 0.95;
+            letter-spacing: 0.02em;
+        }
     </style>
 </head>
 <body>
@@ -101,7 +109,12 @@
 
     <div class="quiz-container">
         <div class="quiz-card">
-            <img src="<%= quiz.thumbnail_url || '/uploads/thumbnails/rogo.png' %>" alt="퀴즈 이미지" class="quiz-image">
+            <div style="position: relative;">
+                <img src="<%= quiz.thumbnail_url || '/uploads/thumbnails/rogo.png' %>" alt="퀴즈 이미지" class="quiz-image">
+                <span class="badge bg-primary category-badge" style="position: absolute; top: 16px; right: 16px; z-index: 2;">
+                    <%= quiz.category %>
+                </span>
+            </div>
             
             <div class="quiz-info">
                 <h2 class="quiz-title">
