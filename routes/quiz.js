@@ -9,12 +9,9 @@ const fs = require('fs');
 // 커스텀 storage: 필드명에 따라 폴더 분기
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        if (file.fieldname === 'thumbnailImage') {
-            const dir = path.join(__dirname, '../public/uploads/thumbnails/');
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            cb(null, dir);
-        } else if (file.fieldname.startsWith('questionImage')) {
-            const dir = path.join(__dirname, '../public/uploads/questions/');
+        // 썸네일과 문제 이미지 모두 temp 폴더에 저장
+        if (file.fieldname === 'thumbnailImage' || file.fieldname.startsWith('questionImage')) {
+            const dir = path.join(__dirname, '../public/uploads/temp/');
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             cb(null, dir);
         } else {
@@ -23,12 +20,17 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const userId = req.session.user ? req.session.user.id : 'guest';
-        const timestamp = Date.now();
+        if (!req.session.uploadTimestamp) {
+            req.session.uploadTimestamp = Date.now();
+        }
+        const timestamp = req.session.uploadTimestamp;
         const ext = path.extname(file.originalname);
         if (file.fieldname === 'thumbnailImage') {
             cb(null, `user${userId}_${timestamp}${ext}`);
         } else if (file.fieldname.startsWith('questionImage')) {
-            cb(null, `qimg_${userId}_${timestamp}_${file.originalname}`);
+            const match = file.fieldname.match(/questionImage(\d+)/);
+            const idx = match ? match[1] : '0';
+            cb(null, `qimg_${userId}_${timestamp}_${idx}${ext}`);
         } else {
             cb(new Error('Unknown fieldname: ' + file.fieldname));
         }
@@ -86,7 +88,8 @@ router.post('/create', upload.any(), async (req, res) => {
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && thumbnailFile) {
-        thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
+        // temp 폴더 경로로 저장
+        thumbnailUrl = '/uploads/temp/' + thumbnailFile.filename;
     }
 
     // 문제 이미지 처리 (프론트에서 문제별 이미지 업로드 구현 필요)
@@ -94,7 +97,8 @@ router.post('/create', upload.any(), async (req, res) => {
     questionsArr = questionsArr.map((q, idx) => {
         const qimg = req.files.find(f => f.fieldname === `questionImage${idx}`);
         if (qimg) {
-            q.image = '/uploads/questions/' + qimg.filename;
+            // temp 폴더 경로로만 저장
+            q.image = '/uploads/temp/' + qimg.filename;
         }
         q.question_type = q.question_type || (questionType === 'choice' ? 'multiple_choice' : 'short_answer');
         return q;
@@ -421,7 +425,7 @@ router.get('/dashboard/:quizId', async (req, res) => {
             return res.redirect('/'); 
         }
 
-        const stats = await Quiz.getStatsByQuizId(quizId);
+    const stats = await Quiz.getStatsByQuizId(quizId);
 
         // 정렬 파라미터 처리
         let order = req.query.order || 'rate_desc';
