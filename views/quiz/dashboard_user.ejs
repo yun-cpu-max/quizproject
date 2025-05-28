@@ -4,30 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사용자 대시보드</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="/style.css"> -->
     <style>
         body {
-            padding-top: 20px;
-            background-color: #f8f9fa;
+            /* padding-top: 20px; */ /* Removed default padding, navbar will handle spacing */
+            /* background-color: #e9ecef !important; */ /* 기존 단색 배경 주석 처리 */
+            background-image: linear-gradient(to bottom, #f0eefc, #e9ecef) !important; /* 상단에 연보라빛, 하단으로 갈수록 회색 그라데이션 */
+            background-repeat: no-repeat; /* 그라데이션 반복 방지 */
+            background-attachment: fixed; /* 스크롤 시 그라데이션 고정 */
+            padding-top: 80px; /* Added padding for fixed navbar */
+            color: #555e68; /* 기본 텍스트 색상 유지 */
         }
         .dashboard-header {
-            background-color: #007bff;
+            /* background-color: #007bff; */ /* 기존 파란색 제거 */
+            /* background: linear-gradient(135deg, rgba(95, 75, 175, 0.9), rgba(120, 95, 200, 0.9)); */ /* 네비게이션 바와 유사한 그라데이션 적용 */
+            background-color: #007bff; /* 요청하신 파란색으로 배경 변경 */
             color: white;
-            padding: 20px;
+            padding: 25px 20px; /* 패딩 조정 */
+            margin-top: 30px; /* 네비게이션 바와의 간격 추가 */
             margin-bottom: 30px;
-            border-radius: 5px;
+            border-radius: 8px; /* 모서리 둥글게 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 변경: 그림자 약간 더 부드럽게 */
+            /* margin-top: 20px; */ /* Adjusted, body padding will handle this */
         }
+        /* .dashboard-header h1 {
+            color: #007bff;  사용자 대시보드 타이틀 파란색으로 변경했었던 규칙 주석 처리 
+        } */
         .summary-card {
             margin-bottom: 20px;
+            border: none; /* 카드 테두리 제거 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); /* 변경: 카드 그림자 더 부드럽게 */
+            background-color: #ffffff; /* 카드 배경 흰색 명시 */
+        }
+        .summary-card .card-title {
+            color: #333; /* 카드 제목 색상 명확하게 */
+        }
+        .summary-card .card-text.display-4 {
+            color: #4a3f80; /* 주요 수치 색상은 기존 보라색 계열 유지 또는 변경 고려 */
         }
         .section-title {
             margin-top: 40px;
             margin-bottom: 20px;
-            font-size: 1.5rem;
+            font-size: 1.6rem; /* 폰트 크기 약간 증가 */
             font-weight: 500;
+            color: #343a40; /* 흰색(#ffffff)에서 어두운 회색으로 변경하여 가독성 확보 */
         }
-        .table th, .table td {
-            vertical-align: middle;
+        .table th {
+            color: #333; /* 테이블 헤더 글자색 */
+            background-color: #f8f9fa; /* 테이블 헤더 배경색 */
+        }
+        .table td {
+            color: #555e68; /* 테이블 셀 글자색 */
         }
         .chart-placeholder {
             height: 200px;
@@ -37,17 +66,167 @@
             justify-content: center;
             border-radius: 5px;
             margin-bottom: 20px;
+            color: #6c757d; /* 차트 플레이스홀더 텍스트 색상 */
         }
         .review-item {
             background-color: white;
-            border: 1px solid #dee2e6;
+            border: 1px solid #e0e0e0; /* 변경: 테두리 색상 연하게 */
             border-radius: 5px;
             padding: 15px;
             margin-bottom: 15px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* 변경: 그림자 추가 */
         }
+        .review-item h5 {
+            color: #333;
+        }
+
+        /* Navbar styles from index.ejs */
+        .navbar {
+            background: linear-gradient(135deg, rgba(95, 75, 175, 0.95), rgba(120, 95, 200, 0.95)) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0.8rem 0;
+            position: fixed; /* Changed to fixed for this page */
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1100;
+            transition: all 0.3s ease;
+        }
+        .navbar-brand {
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+        .navbar-brand .logo {
+            width: 40px;
+            height: auto;
+        }
+        .nav-link {
+            font-size: 1.1rem !important;
+            padding: 0.8rem 1rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            transition: all 0.3s ease !important;
+            position: relative;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            color: #ffffff !important;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            width: calc(100% - 2rem);
+            height: 2px;
+            background: #ffffff;
+            transform: translateX(-50%) scaleX(0);
+            transition: transform 0.3s ease;
+            transform-origin: center;
+        }
+        .nav-link:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+        .nav-link i {
+            font-size: 1rem;
+            margin-right: 2px;
+        }
+        .nav-link.active::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+        }
+        .navbar .btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+        .navbar .btn-outline-light {
+            border-width: 2px;
+        }
+        .navbar .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        .navbar .btn-light {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            font-weight: 500;
+        }
+        .navbar .btn-light:hover {
+            background: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .navbar .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #ffb300);
+            border: none;
+            font-weight: 500;
+            color: #000;
+        }
+        .navbar .btn-warning:hover {
+            background: linear-gradient(45deg, #ffb300, #ffa000);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+        }
+        /* End Navbar styles */
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/home.png" alt="로고" class="logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/category"><i class="bi bi-grid"></i> 카테고리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                    </li>
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/myprofile"><i class="bi bi-person-circle"></i> <%= user.username %>님!</a>
+                        </li>
+                    <% } %>
+                </ul>
+                <div class="d-flex">
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <!-- <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a> -->
+                        <% if (user.role === 'admin') { %>
+                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                        <% } %>
+                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                    <% } else { %>
+                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="dashboard-header text-center">
             <h1><span role="img" aria-label="home">🏠</span> 사용자 대시보드</h1>
@@ -106,14 +285,24 @@
         <!-- 퀴즈 통계 시각화 섹션 -->
         <h2 class="section-title"><span role="img" aria-label="stats">📊</span> 퀴즈 통계 시각화</h2>
         <div class="row">
-            <div class="col-md-6">
-                <div class="chart-placeholder">
-                    <p class="text-muted">📈 점수 변화 추이 (Bar Chart)<br>[ Jan ] [ Feb ] [ Mar ] [ Apr ]</p>
+            <div class="col-md-6 mb-4">
+                <div class="card summary-card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-center mb-3">카테고리별 응시 횟수</h5>
+                        <div class="chart-container" style="position: relative; height:300px; width:100%;">
+                            <canvas id="categoryAttemptsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="chart-placeholder">
-                    <p class="text-muted">🥧 카테고리별 성과 (Pie Chart)<br>[IT:40%] [역사:30%] [기타:30%]</p>
+            <div class="col-md-6 mb-4">
+                <div class="card summary-card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-center mb-3">월별 응시 횟수</h5>
+                        <div class="chart-container" style="position: relative; height:300px; width:100%;">
+                            <canvas id="monthlyAttemptsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -125,9 +314,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         const totalQuizzesVal = "<%= typeof totalQuizzes !== 'undefined' ? totalQuizzes : 0 %>";
         const averageScoreVal = "<%= typeof averageScore !== 'undefined' ? averageScore : '0' %>";
@@ -136,6 +325,10 @@
         const recentAttemptsData = JSON.parse('<%- JSON.stringify(typeof recentAttempts !== "undefined" ? recentAttempts : []) %>');
         const wrongAnswersData = JSON.parse('<%- JSON.stringify(typeof wrongAnswers !== "undefined" ? wrongAnswers : []) %>');
         const serverError = "<%= typeof error !== 'undefined' ? error : '' %>";
+
+        // 서버로부터 전달받을 차트 데이터 (백엔드에서 이 형식으로 전달 필요)
+        const categoryChartData = JSON.parse('<%- JSON.stringify(typeof categoryChartData !== "undefined" ? categoryChartData : {labels: [], data: []}) %>');
+        const monthlyChartData = JSON.parse('<%- JSON.stringify(typeof monthlyChartData !== "undefined" ? monthlyChartData : {labels: [], data: []}) %>');
 
         document.addEventListener('DOMContentLoaded', function () {
             if (serverError) {
@@ -196,6 +389,88 @@
                 noReviewDiv.classList.add('alert', 'alert-light');
                 noReviewDiv.textContent = '오답 기록이 없습니다. 잘하셨어요!';
                 wrongAnswersDiv.appendChild(noReviewDiv);
+            }
+
+            // 카테고리별 응시 횟수 차트 (Pie Chart)
+            const categoryCtx = document.getElementById('categoryAttemptsChart');
+            if (categoryCtx && categoryChartData.labels && categoryChartData.labels.length > 0) {
+                new Chart(categoryCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: categoryChartData.labels,
+                        datasets: [{
+                            label: '카테고리별 응시 횟수',
+                            data: categoryChartData.data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(199, 199, 199, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)',
+                                'rgba(199, 199, 199, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            } else if (categoryCtx) {
+                categoryCtx.getContext('2d').fillText('카테고리별 응시 데이터가 없습니다.', 10, 50);
+            }
+
+            // 월별 응시 횟수 차트 (Bar Chart)
+            const monthlyCtx = document.getElementById('monthlyAttemptsChart');
+            if (monthlyCtx && monthlyChartData.labels && monthlyChartData.labels.length > 0) {
+                new Chart(monthlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthlyChartData.labels,
+                        datasets: [{
+                            label: '월별 응시 횟수',
+                            data: monthlyChartData.data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1 // 정수 단위로 y축 표시
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            } else if (monthlyCtx) {
+                monthlyCtx.getContext('2d').fillText('월별 응시 데이터가 없습니다.', 10, 50);
             }
         });
 

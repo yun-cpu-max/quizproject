@@ -16,6 +16,10 @@
 - title VARCHAR(255)
 - description TEXT
 - thumbnail_url VARCHAR(255)
+- created_by INT (FK → user.id)
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
+- views INT DEFAULT 0
 
 ## question
 - id INT (PK)
@@ -49,6 +53,7 @@
 - thumbnail_url VARCHAR(255)
 - questions JSON
 - created_at TIMESTAMP
+- created_by
 
 > **pending_quiz 설명:**
 > 사용자가 퀴즈 등록을 신청했으나 관리자가 아직 승인하지 않은 임시 퀴즈를 저장하는 테이블입니다. 관리자가 승인하면 정식 quiz 테이블로 이동됩니다.

@@ -169,20 +169,36 @@ router.get('/play/:id', async (req, res) => {
 
         const currentQuestionId = req.session.questionOrder[currentQuestionNum - 1];
         const currentQuestion = questions.find(q => q.id === currentQuestionId);
+        
         if (!currentQuestion) {
-            throw new Error('문제를 찾을 수 없습니다.');
+            throw new Error('현재 질문 객체를 찾을 수 없습니다. questions 배열이나 ID를 확인하세요.');
         }
 
-        let imagePath = "/rogo.png"; // 기본값
+        // 이미지 경로 결정 로직
+        let determinedImagePath = null;
+        const defaultImage = "/rogo.png";
+        const questionImageBase = "/uploads/questions/";
+        const thumbnailImageBase = "/uploads/thumbnails/";
+
         if (currentQuestion.question_img_url) {
-            imagePath = currentQuestion.question_img_url;
+            if (currentQuestion.question_img_url.startsWith('/')) {
+                determinedImagePath = currentQuestion.question_img_url;
+            } else {
+                determinedImagePath = path.posix.join(questionImageBase, currentQuestion.question_img_url);
+            }
         } else if (quiz.thumbnail_url) {
-            imagePath = quiz.thumbnail_url;
+            if (quiz.thumbnail_url.startsWith('/')) {
+                determinedImagePath = quiz.thumbnail_url;
+            } else {
+                determinedImagePath = path.posix.join(thumbnailImageBase, quiz.thumbnail_url);
+            }
         }
+
+        const imagePath = determinedImagePath || defaultImage;
 
         const quizPlayData = {
             quizId: quizId,
-            questionImage: imagePath, // 수정된 이미지 경로 사용
+            questionImage: imagePath,
             questionText: currentQuestion.question,
             totalQuestions: req.session.totalQuestions,
             currentQuestion: currentQuestionNum,
@@ -565,6 +581,36 @@ router.get('/dashboard_user', async (req, res) => {
             LIMIT 5;
         `;
 
+        // 5. 카테고리별 응시 횟수 (차트용)
+        const categoryChartQuery = `
+            SELECT
+                q.category,
+                COUNT(qr.id) AS attemptCount
+            FROM
+                quiz_results qr
+            INNER JOIN
+                quiz q ON qr.quiz_id = q.id
+            WHERE
+                qr.user_id = ?
+            GROUP BY
+                q.category;
+        `;
+
+        // 6. 월별 응시 횟수 (차트용)
+        const monthlyChartQuery = `
+            SELECT
+                DATE_FORMAT(qr.created_at, '%Y-%m') AS attemptMonth,
+                COUNT(qr.id) AS attemptCount
+            FROM
+                quiz_results qr
+            WHERE
+                qr.user_id = ?
+            GROUP BY
+                attemptMonth
+            ORDER BY
+                attemptMonth ASC;
+        `;
+
         const promises = [
             new Promise((resolve, reject) => {
                 db.query(totalQuizzesQuery, [userId], (err, results) => {
@@ -592,7 +638,7 @@ router.get('/dashboard_user', async (req, res) => {
             new Promise((resolve, reject) => { // Promise for wrongAnswers
                 db.query(wrongAnswersQuery, [userId], (err, wrongAnswerItems) => {
                     if (err) return reject(err);
-                    if (wrongAnswerItems.length === 0) return resolve([]);
+                    if (!wrongAnswerItems || wrongAnswerItems.length === 0) return resolve([]);
 
                     const multipleChoiceItems = wrongAnswerItems.filter(item => item.questionType === 'multiple_choice');
                     
@@ -616,7 +662,7 @@ router.get('/dashboard_user', async (req, res) => {
                             db.query(correctOptionsQuery, [multipleChoiceQuestionIds], (optErr, correctOptions) => {
                                 if (optErr) {
                                     console.error("Error fetching correct options for wrong answers:", optErr);
-                                } else {
+                                } else if (correctOptions){
                                     correctOptions.forEach(opt => {
                                         correctOptionsMap[opt.question_id] = opt.option_text;
                                     });
@@ -636,7 +682,7 @@ router.get('/dashboard_user', async (req, res) => {
                             db.query(userAnswerTextsQuery, [userAnswerOptionIds], (optErr, userAnswerOptions) => {
                                 if (optErr) {
                                     console.error("Error fetching user answer option texts:", optErr);
-                                } else {
+                                } else if (userAnswerOptions){
                                     userAnswerOptions.forEach(opt => {
                                         userAnswerTextsMap[opt.id] = opt.option_text;
                                     });
@@ -663,7 +709,7 @@ router.get('/dashboard_user', async (req, res) => {
                                 questionText: item.questionText,
                                 myAnswer: myAnswerDisplay, 
                                 correctAnswer: correctAnswerDisplay,
-                                explanation: "해설이 제공되지 않는 문제입니다.",
+                                explanation: "해설이 제공되지 않는 문제입니다.", // 기본 해설
                                 quizId: item.quizId,
                                 questionId: item.questionId
                             };
@@ -671,23 +717,53 @@ router.get('/dashboard_user', async (req, res) => {
                         resolve(formattedResults);
                     }).catch(detailErr => {
                         console.error("Error in Promise.all for detail fetching:", detailErr);
-                        const fallbackResults = wrongAnswerItems.map(item => ({
+                        const fallbackResults = wrongAnswerItems.map(item => ({ // 폴백 데이터 매핑
                             quizTitle: item.quizTitle,
                             questionNumber: item.questionNumber,
                             questionText: item.questionText,
                             myAnswer: item.myAnswer, 
                             correctAnswer: item.subjectiveCorrectAnswer, 
-                            explanation: "해설이 제공되지 않는 문제입니다.",
+                            explanation: "해설 정보를 불러오는데 실패했습니다.",
                             quizId: item.quizId,
                             questionId: item.questionId
                         }));
                         resolve(fallbackResults); 
                     });
                 });
+            }),
+            // 차트 데이터용 Promise 추가
+            new Promise((resolve, reject) => {
+                db.query(categoryChartQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    resolve({
+                        labels: results.map(row => row.category),
+                        data: results.map(row => row.attemptCount)
+                    });
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(monthlyChartQuery, [userId], (err, results) => {
+                    if (err) return reject(err);
+                    const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+                    resolve({
+                        labels: results.map(row => {
+                            const monthIndex = parseInt(row.attemptMonth.substring(5, 7), 10) - 1;
+                            return monthNames[monthIndex];
+                        }),
+                        data: results.map(row => row.attemptCount)
+                    });
+                });
             })
         ];
-
-        const [totalQuizzes, overallStats, recentAttempts, wrongAnswers] = await Promise.all(promises);
+        
+        const [
+            totalQuizzes, 
+            overallStats, 
+            recentAttempts, 
+            wrongAnswers, 
+            categoryChartData, 
+            monthlyChartData
+        ] = await Promise.all(promises);
 
         res.render('quiz/dashboard_user', {
             user: req.session.user,
@@ -695,7 +771,10 @@ router.get('/dashboard_user', async (req, res) => {
             averageScore: parseFloat(overallStats.averageScore).toFixed(1),
             correctRate: parseFloat(overallStats.correctRate).toFixed(1),
             recentAttempts: recentAttempts,
-            wrongAnswers: wrongAnswers
+            wrongAnswers: wrongAnswers,
+            categoryChartData: categoryChartData,
+            monthlyChartData: monthlyChartData,
+            error: null
         });
 
     } catch (error) {
@@ -707,9 +786,339 @@ router.get('/dashboard_user', async (req, res) => {
             correctRate: '0',
             recentAttempts: [],
             wrongAnswers: [],
+            categoryChartData: { labels: [], data: [] },
+            monthlyChartData: { labels: [], data: [] },
             error: "데이터를 불러오는 중 오류가 발생했습니다."
         });
     }
+});
+
+// 퀴즈 소유권 확인 미들웨어
+function checkQuizOwnership(req, res, next) {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    
+    const quizId = req.params.id;
+    const userId = req.session.user.id;
+    
+    db.query('SELECT created_by FROM quiz WHERE id = ?', [quizId], (err, results) => {
+        if (err || results.length === 0) {
+            return res.redirect('/');
+        }
+        
+        const quiz = results[0];
+        if (quiz.created_by !== userId && req.session.user.role !== 'admin') {
+            return res.status(403).send('수정 권한이 없습니다.');
+        }
+        
+        next();
+    });
+}
+
+// 퀴즈 수정 페이지
+router.get('/edit/:id', checkQuizOwnership, (req, res) => {
+    const quizId = req.params.id;
+    
+    // 퀴즈 기본 정보 조회
+    db.query('SELECT * FROM quiz WHERE id = ?', [quizId], (err, quizResults) => {
+        if (err || quizResults.length === 0) {
+            return res.redirect('/');
+        }
+        
+        const quiz = quizResults[0];
+        
+        // 문제들 조회
+        db.query('SELECT * FROM question WHERE quiz_id = ? ORDER BY id', [quizId], (err, questions) => {
+            if (err) {
+                return res.render('quiz/edit', { 
+                    quiz, 
+                    questions: [], 
+                    user: req.session.user, 
+                    error: '문제를 불러오는데 실패했습니다.' 
+                });
+            }
+            
+            // 각 문제의 선택지들 조회
+            const questionIds = questions.map(q => q.id);
+            if (questionIds.length > 0) {
+                db.query(
+                    'SELECT * FROM question_option WHERE question_id IN (?) ORDER BY question_id, option_order', 
+                    [questionIds], 
+                    (err, options) => {
+                        if (err) {
+                            return res.render('quiz/edit', { 
+                                quiz, 
+                                questions, 
+                                user: req.session.user, 
+                                error: '선택지를 불러오는데 실패했습니다.' 
+                            });
+                        }
+                        
+                        // 문제별로 선택지 그룹화
+                        const optionsByQuestion = {};
+                        options.forEach(option => {
+                            if (!optionsByQuestion[option.question_id]) {
+                                optionsByQuestion[option.question_id] = [];
+                            }
+                            optionsByQuestion[option.question_id].push(option);
+                        });
+                        
+                        // 문제에 선택지 정보 추가
+                        questions.forEach(question => {
+                            question.options = optionsByQuestion[question.id] || [];
+                        });
+                        
+                        res.render('quiz/edit', { 
+                            quiz, 
+                            questions, 
+                            user: req.session.user, 
+                            error: null 
+                        });
+                    }
+                );
+            } else {
+                res.render('quiz/edit', { 
+                    quiz, 
+                    questions, 
+                    user: req.session.user, 
+                    error: null 
+                });
+            }
+        });
+    });
+});
+
+// 퀴즈 수정 처리
+router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
+    const quizId = req.params.id;
+    const { title, description, category, questions, thumbnailType } = req.body;
+    
+    // 썸네일 처리
+    let thumbnailUrl = '';
+    const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnailImage');
+    
+    if (thumbnailType === 'default') {
+        thumbnailUrl = '/rogo.png';
+    } else if (thumbnailType === 'custom' && thumbnailFile) {
+        thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
+    } else if (thumbnailType === 'keep') {
+        // 기존 썸네일 유지 - 현재 값을 조회해서 사용
+        db.query('SELECT thumbnail_url FROM quiz WHERE id = ?', [quizId], (err, results) => {
+            if (!err && results.length > 0) {
+                thumbnailUrl = results[0].thumbnail_url;
+            }
+        });
+    }
+    
+    // 문제 데이터 처리
+    let questionsArr = [];
+    if (questions) {
+        questionsArr = Object.values(questions).filter(q => q && q.text);
+        questionsArr = questionsArr.map((q, idx) => {
+            const qimg = req.files.find(f => f.fieldname === `questions[${idx + 1}][image]`);
+            if (qimg) {
+                q.image = '/uploads/questions/' + qimg.filename;
+            }
+            return q;
+        });
+    }
+    
+    // 트랜잭션 시작
+    db.beginTransaction((err) => {
+        if (err) {
+            console.error('트랜잭션 시작 오류:', err);
+            return res.render('quiz/edit', { 
+                error: '수정 중 오류가 발생했습니다.', 
+                user: req.session.user,
+                quiz: { id: quizId },
+                questions: []
+            });
+        }
+        
+        // 1. 퀴즈 기본 정보 업데이트
+        const updateQuizQuery = thumbnailType === 'keep' 
+            ? 'UPDATE quiz SET title = ?, description = ?, category = ?, updated_at = NOW() WHERE id = ?'
+            : 'UPDATE quiz SET title = ?, description = ?, category = ?, thumbnail_url = ?, updated_at = NOW() WHERE id = ?';
+        
+        const updateQuizParams = thumbnailType === 'keep' 
+            ? [title, description, category, quizId]
+            : [title, description, category, thumbnailUrl, quizId];
+        
+        db.query(updateQuizQuery, updateQuizParams, (err) => {
+            if (err) {
+                console.error('퀴즈 정보 업데이트 오류:', err);
+                return db.rollback(() => {
+                    res.render('quiz/edit', { 
+                        error: '퀴즈 정보 수정에 실패했습니다.', 
+                        user: req.session.user,
+                        quiz: { id: quizId },
+                        questions: []
+                    });
+                });
+            }
+            
+            // 2. 기존 문제들과 선택지들 삭제
+            db.query('DELETE FROM question_option WHERE question_id IN (SELECT id FROM question WHERE quiz_id = ?)', [quizId], (err) => {
+                if (err) {
+                    console.error('기존 선택지 삭제 오류:', err);
+                    return db.rollback(() => {
+                        res.render('quiz/edit', { 
+                            error: '기존 선택지 삭제에 실패했습니다.', 
+                            user: req.session.user,
+                            quiz: { id: quizId },
+                            questions: []
+                        });
+                    });
+                }
+                
+                db.query('DELETE FROM question WHERE quiz_id = ?', [quizId], (err) => {
+                    if (err) {
+                        console.error('기존 문제 삭제 오류:', err);
+                        return db.rollback(() => {
+                            res.render('quiz/edit', { 
+                                error: '기존 문제 삭제에 실패했습니다.', 
+                                user: req.session.user,
+                                quiz: { id: quizId },
+                                questions: []
+                            });
+                        });
+                    }
+                    
+                    // 3. 새로운 문제들 추가
+                    insertNewQuestions(quizId, questionsArr, req.files, req.session.user.id, db, (success) => {
+                        if (success) {
+                            db.commit((err) => {
+                                if (err) {
+                                    console.error('커밋 오류:', err);
+                                    return db.rollback(() => {
+                                        res.render('quiz/edit', { 
+                                            error: '수정 완료 처리에 실패했습니다.', 
+                                            user: req.session.user,
+                                            quiz: { id: quizId },
+                                            questions: []
+                                        });
+                                    });
+                                }
+                                res.redirect(`/quiz/list/${quizId}?updated=1`);
+                            });
+                        } else {
+                            db.rollback(() => {
+                                res.render('quiz/edit', { 
+                                    error: '새로운 문제 추가에 실패했습니다.', 
+                                    user: req.session.user,
+                                    quiz: { id: quizId },
+                                    questions: []
+                                });
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    });
+});
+
+// 새로운 문제들을 삽입하는 헬퍼 함수
+function insertNewQuestions(quizId, questionsArr, files, userId, db, callback) {
+    if (!questionsArr || questionsArr.length === 0) {
+        return callback(false);
+    }
+    
+    let completedQuestions = 0;
+    let hasError = false;
+    
+    questionsArr.forEach((question, index) => {
+        if (hasError) return;
+        
+        const questionType = question.answer ? 'short_answer' : 'multiple_choice';
+        const correctAnswer = question.answer || '';
+        const questionImage = question.image || null;
+        
+        // 문제 삽입
+        db.query(
+            'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by, question_img_url) VALUES (?, ?, ?, ?, ?, ?)',
+            [quizId, question.text, questionType, correctAnswer, userId, questionImage],
+            (err, result) => {
+                if (err) {
+                    console.error('문제 삽입 오류:', err);
+                    hasError = true;
+                    return callback(false);
+                }
+                
+                const questionId = result.insertId;
+                
+                // 객관식인 경우 선택지 삽입
+                if (questionType === 'multiple_choice') {
+                    const options = [
+                        { text: question.option1, order: 1, isCorrect: question.correct === '1' },
+                        { text: question.option2, order: 2, isCorrect: question.correct === '2' },
+                        { text: question.option3, order: 3, isCorrect: question.correct === '3' },
+                        { text: question.option4, order: 4, isCorrect: question.correct === '4' }
+                    ];
+                    
+                    let completedOptions = 0;
+                    options.forEach(option => {
+                        db.query(
+                            'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)',
+                            [questionId, option.text, option.isCorrect ? 1 : 0, option.order],
+                            (err) => {
+                                if (err) {
+                                    console.error('선택지 삽입 오류:', err);
+                                    hasError = true;
+                                    return callback(false);
+                                }
+                                
+                                completedOptions++;
+                                if (completedOptions === 4) {
+                                    completedQuestions++;
+                                    if (completedQuestions === questionsArr.length) {
+                                        callback(true);
+                                    }
+                                }
+                            }
+                        );
+                    });
+                } else {
+                    // 주관식인 경우
+                    completedQuestions++;
+                    if (completedQuestions === questionsArr.length) {
+                        callback(true);
+                    }
+                }
+            }
+        );
+    });
+}
+
+// 내가 만든 퀴즈 목록 페이지
+router.get('/my-quizzes', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    
+    const userId = req.session.user.id;
+    
+    db.query(
+        'SELECT id, title, category, description, thumbnail_url, created_at, views FROM quiz WHERE created_by = ? ORDER BY created_at DESC',
+        [userId],
+        (err, results) => {
+            if (err) {
+                console.error('내 퀴즈 목록 조회 오류:', err);
+                return res.render('quiz/my-quizzes', { 
+                    quizzes: [], 
+                    user: req.session.user, 
+                    error: '퀴즈 목록을 불러오는데 실패했습니다.' 
+                });
+            }
+            
+            res.render('quiz/my-quizzes', { 
+                quizzes: results, 
+                user: req.session.user, 
+                error: null 
+            });
+        }
+    );
 });
 
 module.exports = router;
