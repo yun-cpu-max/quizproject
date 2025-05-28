@@ -254,6 +254,18 @@
                         테스트 퀴즈에 대한 설명입니다.<br>DB연동 예정입니다.
                     <% } %>
                 </p>
+                
+                <!-- 수정 버튼 추가 (작성자나 관리자만 표시) -->
+                <% if (typeof user !== 'undefined' && user && typeof quiz !== 'undefined' && quiz && (quiz.created_by === user.id || user.role === 'admin')) { %>
+                    <div class="mb-3">
+                        <a href="/quiz/edit/<%= quiz.id %>" class="btn btn-warning me-2">
+                            <i class="bi bi-pencil"></i> 퀴즈 수정
+                        </a>
+                        <a href="/quiz/dashboard/<%= quiz.id %>" class="btn btn-info">
+                            <i class="bi bi-bar-chart"></i> 통계 보기
+                        </a>
+                    </div>
+                <% } %>
             </div>
 
             <div class="count-buttons mb-4">

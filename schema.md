@@ -16,6 +16,10 @@
 - title VARCHAR(255)
 - description TEXT
 - thumbnail_url VARCHAR(255)
+- created_by INT (FK → user.id)
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
+- views INT DEFAULT 0
 
 ## question
 - id INT (PK)
