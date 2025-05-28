@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랭킹 - 오늘의 퀴즈</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .navbar {
+            background: linear-gradient(135deg, rgba(95, 75, 175, 0.95), rgba(120, 95, 200, 0.95)) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0.8rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+            transition: all 0.3s ease;
+            min-height: 56px;
+        }
+        .navbar-brand {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+        }
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+        .navbar-brand .logo {
+            height: 100%;
+            width: auto;
+            display: block;
+        }
+        .nav-link {
+            font-size: 1.1rem !important;
+            padding: 0.8rem 1rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            transition: all 0.3s ease !important;
+            position: relative;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            color: #ffffff !important;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            width: calc(100% - 2rem);
+            height: 2px;
+            background: #ffffff;
+            transform: translateX(-50%) scaleX(0);
+            transition: transform 0.3s ease;
+            transform-origin: center;
+        }
+        .nav-link:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+        .nav-link i {
+            font-size: 1rem;
+            margin-right: 2px;
+        }
+        .nav-link.active::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+        }
+        .navbar .btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+        .navbar .btn-outline-light {
+            border-width: 2px;
+        }
+        .navbar .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        .navbar .btn-light {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            font-weight: 500;
+        }
+        .navbar .btn-light:hover {
+            background: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .navbar .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #ffb300);
+            border: none;
+            font-weight: 500;
+            color: #000;
+        }
+        .navbar .btn-warning:hover {
+            background: linear-gradient(45deg, #ffb300, #ffa000);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+        }
+
+        .ranking-container {
+            padding: 2rem 0;
+            min-height: calc(100vh - 56px);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .ranking-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .ranking-header h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .ranking-header p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .period-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .period-btn {
+            padding: 0.8rem 2rem;
+            margin: 0 0.5rem;
+            border: 2px solid #6c5ce7;
+            background: transparent;
+            color: #6c5ce7;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .period-btn.active,
+        .period-btn:hover {
+            background: #6c5ce7;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        }
+
+        .ranking-tabs {
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: 1px solid #d1c4e9;
+            background: transparent;
+            color: #6c5ce7 !important;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 50px 50px 0 0;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white !important;
+            border-color: #6c5ce7;
+            border-bottom-color: white;
+        }
+
+        .nav-tabs .nav-link:hover:not(.active) {
+            background: rgba(108, 92, 231, 0.1);
+            color: #6c5ce7 !important;
+        }
+
+        .ranking-card {
+            background: rgb(255, 255, 255);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .ranking-card-header {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: rgb(255, 255, 255);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .ranking-card-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .ranking-list {
+            padding: 0;
+            margin: 0;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .ranking-item:hover {
+            background: #f8f9fa;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-position {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 1.5rem;
+        }
+
+        .ranking-position.gold {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #b8860b;
+        }
+
+        .ranking-position.silver {
+            background: linear-gradient(135deg, #c0c0c0, #e5e5e5);
+            color: #696969;
+        }
+
+        .ranking-position.bronze {
+            background: linear-gradient(135deg, #cd7f32, #daa520);
+            color: #8b4513;
+        }
+
+        .ranking-position.other {
+            background: linear-gradient(135deg, #e9ecef, #f8f9fa);
+            color: #6c757d;
+        }
+
+        .ranking-info {
+            flex: 1;
+        }
+
+        .ranking-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .ranking-details {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .ranking-score {
+            text-align: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #6c5ce7;
+        }
+
+        .ranking-score-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        .empty-ranking {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .empty-ranking i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .ranking-header h1 {
+                font-size: 2rem;
+            }
+
+            .period-btn {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .nav-tabs .nav-link {
+                padding: 0.8rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .ranking-item {
+                padding: 1rem;
+            }
+
+            .ranking-position {
+                width: 50px;
+                height: 50px;
+                margin-right: 1rem;
+            }
+
+            .ranking-name {
+                font-size: 1rem;
+            }
+
+            .ranking-score {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Bootstrap 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/home.png" alt="로고" class="logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/category"><i class="bi bi-grid"></i> 카테고리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                    </li>
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <li class="nav-item">
+                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
+                        </li>
+                    <% } %>
+                </ul>
+                <div class="d-flex">
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
+                        <% if (user.role === 'admin') { %>
+                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                        <% } %>
+                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                    <% } else { %>
+                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="ranking-container">
+        <div class="container">
+            <!-- 랭킹 헤더 -->
+            <div class="ranking-header">
+                <h1><i class="bi bi-trophy me-3"></i>랭킹</h1>
+                <p>퀴즈 챔피언들을 만나보세요!</p>
+            </div>
+
+            <!-- 기간 선택 -->
+            <div class="period-selector">
+                <button class="period-btn active" data-period="all">
+                    <i class="bi bi-infinity me-2"></i>전체
+                </button>
+                <button class="period-btn" data-period="monthly">
+                    <i class="bi bi-calendar-month me-2"></i>월간
+                </button>
+                <button class="period-btn" data-period="weekly">
+                    <i class="bi bi-calendar-week me-2"></i>주간
+                </button>
+            </div>
+
+            <!-- 랭킹 탭 -->
+            <ul class="nav nav-tabs ranking-tabs" id="rankingTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="correct-answers-tab" data-bs-toggle="tab" data-bs-target="#correct-answers" type="button" role="tab">
+                        <i class="bi bi-check-circle me-2"></i>맞힌 문제 수
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="completed-quiz-tab" data-bs-toggle="tab" data-bs-target="#completed-quiz" type="button" role="tab">
+                        <i class="bi bi-list-check me-2"></i>완료한 퀴즈 수
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="popular-quiz-tab" data-bs-toggle="tab" data-bs-target="#popular-quiz" type="button" role="tab">
+                        <i class="bi bi-people me-2"></i>인기 퀴즈
+                    </button>
+                </li>
+            </ul>
+
+            <!-- 랭킹 내용 -->
+            <div class="tab-content" id="rankingTabsContent">
+                <!-- 맞힌 문제 수 랭킹 -->
+                <div class="tab-pane fade show active" id="correct-answers" role="tabpanel">
+                    <div class="ranking-card">
+                        <div class="ranking-card-header">
+                            <h3><i class="bi bi-check-circle me-2"></i>맞힌 문제 수 랭킹</h3>
+                        </div>
+                        <div class="ranking-list">
+                            <!-- 예시 데이터 - 실제로는 백엔드에서 전달받을 데이터 -->
+                            <% if (typeof correctAnswersRanking !== 'undefined' && correctAnswersRanking && correctAnswersRanking.length > 0) { %>
+                                <% correctAnswersRanking.forEach((user, index) => { %>
+                                    <div class="ranking-item">
+                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                            <%= index + 1 %>
+                                        </div>
+                                        <div class="ranking-info">
+                                            <div class="ranking-name"><%= user.username %></div>
+                                            <div class="ranking-details">정답률: <%= user.accuracy %>%</div>
+                                        </div>
+                                        <div class="ranking-score">
+                                            <%= user.correctAnswers %>
+                                            <div class="ranking-score-label">문제</div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <div class="empty-ranking">
+                                    <i class="bi bi-trophy"></i>
+                                    <h4>아직 랭킹 데이터가 없습니다</h4>
+                                    <p>퀴즈를 풀고 랭킹에 도전해보세요!</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 완료한 퀴즈 수 랭킹 -->
+                <div class="tab-pane fade" id="completed-quiz" role="tabpanel">
+                    <div class="ranking-card">
+                        <div class="ranking-card-header">
+                            <h3><i class="bi bi-list-check me-2"></i>완료한 퀴즈 수 랭킹</h3>
+                        </div>
+                        <div class="ranking-list">
+                            <% if (typeof completedQuizRanking !== 'undefined' && completedQuizRanking && completedQuizRanking.length > 0) { %>
+                                <% completedQuizRanking.forEach((user, index) => { %>
+                                    <div class="ranking-item">
+                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                            <%= index + 1 %>
+                                        </div>
+                                        <div class="ranking-info">
+                                            <div class="ranking-name"><%= user.username %></div>
+                                            <div class="ranking-details">평균 점수: <%= user.averageScore %>점</div>
+                                        </div>
+                                        <div class="ranking-score">
+                                            <%= user.completedQuizzes %>
+                                            <div class="ranking-score-label">퀴즈</div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <div class="empty-ranking">
+                                    <i class="bi bi-list-check"></i>
+                                    <h4>아직 랭킹 데이터가 없습니다</h4>
+                                    <p>퀴즈를 완료하고 랭킹에 도전해보세요!</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 인기 퀴즈 랭킹 -->
+                <div class="tab-pane fade" id="popular-quiz" role="tabpanel">
+                    <div class="ranking-card">
+                        <div class="ranking-card-header">
+                            <h3><i class="bi bi-people me-2"></i>인기 퀴즈 랭킹</h3>
+                        </div>
+                        <div class="ranking-list">
+                            <% if (typeof popularQuizRanking !== 'undefined' && popularQuizRanking && popularQuizRanking.length > 0) { %>
+                                <% popularQuizRanking.forEach((quiz, index) => { %>
+                                    <div class="ranking-item">
+                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                            <%= index + 1 %>
+                                        </div>
+                                        <div class="ranking-info">
+                                            <div class="ranking-name"><%= quiz.title %></div>
+                                            <div class="ranking-details">카테고리: <%= quiz.category %> | 평균 점수: <%= quiz.averageScore %>점</div>
+                                        </div>
+                                        <div class="ranking-score">
+                                            <%= quiz.participantCount %>
+                                            <div class="ranking-score-label">명 참여</div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <div class="empty-ranking">
+                                    <i class="bi bi-people"></i>
+                                    <h4>아직 랭킹 데이터가 없습니다</h4>
+                                    <p>퀴즈에 참여하고 인기 퀴즈를 만들어보세요!</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 기간 선택 버튼 이벤트
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 모든 버튼에서 active 클래스 제거
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                // 클릭된 버튼에 active 클래스 추가
+                this.classList.add('active');
+                
+                // 여기에 AJAX 요청을 통해 해당 기간의 데이터를 가져오는 로직 추가
+                const period = this.dataset.period;
+                console.log('Selected period:', period);
+                // TODO: 백엔드 API 호출하여 해당 기간의 랭킹 데이터 가져오기
+            });
+        });
+
+        // 탭 변경 이벤트
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(event) {
+                const targetTab = event.target.getAttribute('data-bs-target');
+                console.log('Active tab:', targetTab);
+                // TODO: 탭 변경 시 해당 랭킹 데이터 로드
+            });
+        });
+    </script>
+</body>
+</html> 

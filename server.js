@@ -166,6 +166,41 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
+// 랭킹 페이지 라우트
+app.get('/ranking', (req, res) => {
+    // 예시 랭킹 데이터 (추후 DB에서 실제 데이터 조회)
+    const exampleRankings = {
+        correctAnswersRanking: [
+            { username: '퀴즈왕123', accuracy: 95, correctAnswers: 150 },
+            { username: '천재게이머', accuracy: 92, correctAnswers: 140 },
+            { username: '상식박사', accuracy: 88, correctAnswers: 130 },
+            { username: '위키피디아', accuracy: 85, correctAnswers: 120 },
+            { username: '알쓸신잡러', accuracy: 80, correctAnswers: 110 },
+        ],
+        completedQuizRanking: [
+            { username: '올클리어', averageScore: 90, completedQuizzes: 25 },
+            { username: '퀴즈마스터', averageScore: 88, completedQuizzes: 22 },
+            { username: '도전자', averageScore: 85, completedQuizzes: 20 },
+            { username: '탐험가', averageScore: 82, completedQuizzes: 18 },
+            { username: '노력파', averageScore: 80, completedQuizzes: 15 },
+        ],
+        popularQuizRanking: [
+            { title: 'สุดยอดแบบทดสอบความรู้ทั่วไป!', category: '상식', averageScore: 85, participantCount: 1250 },
+            { title: '과학 상식 퀴즈 대회', category: '과학', averageScore: 80, participantCount: 1100 },
+            { title: '역사 속 인물 맞추기', category: '역사', averageScore: 78, participantCount: 950 },
+            { title: '스포츠 월드컵 퀴즈', category: '스포츠', averageScore: 88, participantCount: 900 },
+            { title: '최신 영화 & 드라마 퀴즈', category: '엔터테인먼트', averageScore: 75, participantCount: 800 },
+        ]
+    };
+
+    res.render('ranking', { 
+        user: req.session.user,
+        correctAnswersRanking: exampleRankings.correctAnswersRanking,
+        completedQuizRanking: exampleRankings.completedQuizRanking,
+        popularQuizRanking: exampleRankings.popularQuizRanking
+    });
+});
+
 // 회원가입 페이지 렌더링
 app.get('/signup', (req, res) => {
     res.render('signup', { error: null });
