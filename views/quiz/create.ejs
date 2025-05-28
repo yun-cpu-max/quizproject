@@ -155,16 +155,16 @@
             alert('최대 30문제까지만 추가할 수 있습니다.');
             return;
         }
+        const qIdx = questionCount;
         questionCount++;
         updateQuestionCount();
-        const qIdx = questionCount;
         let questionHtml = '';
         if (currentType === 'choice') {
             questionHtml = `
                 <div class="card mb-3" id="question-card-${qIdx}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">문제 ${qIdx}</h6>
+                            <h6 class="mb-0">문제 ${qIdx + 1}</h6>
                             <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(${qIdx})">삭제</button>
                         </div>
                         <div class="mb-3">
@@ -214,7 +214,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">문제 이미지 (선택)</label>
-                            <input type="file" class="form-control" name="questions[${qIdx}][image]" accept="image/*">
+                            <input type="file" class="form-control" name="questionImage${qIdx}" accept="image/*">
                         </div>
                     </div>
                 </div>
@@ -224,7 +224,7 @@
                 <div class="card mb-3" id="question-card-${qIdx}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">문제 ${qIdx}</h6>
+                            <h6 class="mb-0">문제 ${qIdx + 1}</h6>
                             <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(${qIdx})">삭제</button>
                         </div>
                         <div class="mb-3">
@@ -237,7 +237,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">문제 이미지 (선택)</label>
-                            <input type="file" class="form-control" name="questions[${qIdx}][image]" accept="image/*">
+                            <input type="file" class="form-control" name="questionImage${qIdx}" accept="image/*">
                         </div>
                     </div>
                 </div>
@@ -286,7 +286,7 @@
 
         // 객관식인 경우에만 중복 체크
         if (currentType === 'choice') {
-            for (let i = 1; i <= questionCount; i++) {
+            for (let i = 0; i < questionCount; i++) {
                 const options = [
                     document.querySelector(`input[name="questions[${i}][option1]"]`).value.trim(),
                     document.querySelector(`input[name="questions[${i}][option2]"]`).value.trim(),
@@ -296,7 +296,7 @@
 
                 const uniqueOptions = new Set(options);
                 if (options.length !== uniqueOptions.size) {
-                    alert(`문제 ${i}번의 선택지가 중복되었습니다. 확인해주세요.`);
+                    alert(`문제 ${i + 1}번의 선택지가 중복되었습니다. 확인해주세요.`);
                     e.preventDefault();
                     return;
                 }
