@@ -9,7 +9,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/style.css">
     <style>
-        body { background-color: #f5f6fa; font-family: 'Noto Sans KR', sans-serif; padding-top: 20px; padding-bottom: 20px; }
+        body { background-color: #f5f6fa; font-family: 'Noto Sans KR', sans-serif; padding-bottom: 20px; }
         .main-content-area { background: #fff; border-radius: 18px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 30px 25px; }
         .sidebar-area .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .sidebar-area .card-header { background-color: #4a3b8c; color: white; font-weight: bold; border-top-left-radius: 12px; border-top-right-radius: 12px;}
@@ -56,14 +56,14 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
                     </li>
-                    <% if (typeof user !== 'undefined' && user) { %>
+                    <% if (user) { %>
                         <li class="nav-item">
                             <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
                         </li>
                     <% } %>
                 </ul>
                 <div class="d-flex">
-                    <% if (typeof user !== 'undefined' && user) { %>
+                    <% if (user) { %>
                         <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
                         <% if (user.role === 'admin') { %>
                         <a href="/admin" class="btn btn-warning me-2 active"><i class="bi bi-gear"></i> 관리자</a>
@@ -77,7 +77,7 @@
             </div>
         </div>
     </nav>
-    <div class="container">
+    <div class="container" style="margin-top: 3rem;">
         <div class="row">
             <!-- 좌측 메인 콘텐츠 영역 -->
             <div class="col-lg-8">

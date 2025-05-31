@@ -510,7 +510,8 @@ router.get('/dashboard/:quizId', async (req, res) => {
             rankings,
             recommendedQuizzes, // 추천 퀴즈 정보 전달
             quizId, 
-            order 
+            order,
+            user: req.session.user || null // 사용자 세션 정보 안전하게 전달
         });
 
     } catch (error) {
