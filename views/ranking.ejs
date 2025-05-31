@@ -114,7 +114,7 @@
         .ranking-container {
             padding: 2rem 0;
             min-height: calc(100vh - 56px);
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: linear-gradient(135deg, var(--primary-color), #6a4bcc);
         }
 
         .ranking-header {
@@ -126,13 +126,13 @@
         .ranking-header h1 {
             font-size: 2.5rem;
             font-weight: bold;
-            color: #2c3e50;
+            color: #ffffff;
             margin-bottom: 1rem;
         }
 
         .ranking-header p {
             font-size: 1.2rem;
-            color: #6c757d;
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .period-selector {
@@ -144,9 +144,9 @@
         .period-btn {
             padding: 0.8rem 2rem;
             margin: 0 0.5rem;
-            border: 2px solid #6c5ce7;
+            border: 2px solid #f8f9fa;
             background: transparent;
-            color: #6c5ce7;
+            color: #f8f9fa;
             border-radius: 50px;
             font-weight: 600;
             transition: all 0.3s ease;
@@ -155,10 +155,10 @@
 
         .period-btn.active,
         .period-btn:hover {
-            background: #6c5ce7;
-            color: white;
+            background: #f8f9fa;
+            color: #6c5ce7;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+            box-shadow: 0 4px 15px rgba(248, 249, 250, 0.3);
         }
 
         .ranking-tabs {
@@ -166,9 +166,9 @@
         }
 
         .nav-tabs .nav-link {
-            border: 1px solid #d1c4e9;
+            border: 1px solid rgba(255, 255, 255, 0.3);
             background: transparent;
-            color: #6c5ce7 !important;
+            color: #f8f9fa !important;
             font-weight: 600;
             padding: 1rem 2rem;
             border-radius: 50px 50px 0 0;
@@ -177,28 +177,28 @@
         }
 
         .nav-tabs .nav-link.active {
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-            color: white !important;
-            border-color: #6c5ce7;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #6c5ce7 !important;
+            border-color: #f8f9fa;
             border-bottom-color: white;
         }
 
         .nav-tabs .nav-link:hover:not(.active) {
-            background: rgba(108, 92, 231, 0.1);
-            color: #6c5ce7 !important;
+            background: rgba(248, 249, 250, 0.1);
+            color: #ffffff !important;
         }
 
         .ranking-card {
             background: rgb(255, 255, 255);
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             margin-bottom: 2rem;
         }
 
         .ranking-card-header {
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-            color: rgb(255, 255, 255);
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #2c3e50;
             padding: 1.5rem;
             text-align: center;
         }
@@ -258,8 +258,8 @@
         }
 
         .ranking-position.other {
-            background: linear-gradient(135deg, #e9ecef, #f8f9fa);
-            color: #6c757d;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #ffffff;
         }
 
         .ranking-info {
@@ -282,7 +282,7 @@
             text-align: right;
             font-size: 1.5rem;
             font-weight: bold;
-            color: #6c5ce7;
+            color: #6c757d;
         }
 
         .ranking-score-label {
