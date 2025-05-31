@@ -76,10 +76,6 @@
             text-decoration: none;
         }
 
-        .navbar {
-            background-color: #5541b5 !important;
-        }
-
         .logo {
             height: 40px;
             width: auto;
@@ -99,10 +95,40 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="홈" class="logo">
+                <img src="/home.png" alt="로고" class="logo">
             </a>
-            <div class="d-flex">
-                <a href="/" class="btn btn-outline-light">홈으로</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                    </li>
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <li class="nav-item">
+                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
+                        </li>
+                    <% } %>
+                </ul>
+                <div class="d-flex">
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
+                        <% if (user.role === 'admin') { %>
+                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                        <% } %>
+                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                    <% } else { %>
+                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                    <% } %>
+                </div>
             </div>
         </div>
     </nav>

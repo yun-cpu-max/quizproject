@@ -4,186 +4,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사용자 대시보드</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- <link rel="stylesheet" href="/style.css"> -->
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/style.css">
     <style>
         body {
-            /* padding-top: 20px; */ /* Removed default padding, navbar will handle spacing */
-            /* background-color: #e9ecef !important; */ /* 기존 단색 배경 주석 처리 */
-            background-image: linear-gradient(to bottom, #f0eefc, #e9ecef) !important; /* 상단에 연보라빛, 하단으로 갈수록 회색 그라데이션 */
-            background-repeat: no-repeat; /* 그라데이션 반복 방지 */
-            background-attachment: fixed; /* 스크롤 시 그라데이션 고정 */
-            padding-top: 80px; /* Added padding for fixed navbar */
-            color: #555e68; /* 기본 텍스트 색상 유지 */
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), #6a4bcc);
+            min-height: 100vh;
+            color: var(--text-color);
+             /* Adjusted for fixed navbar */
+        }
+        .container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
         }
         .dashboard-header {
-            /* background-color: #007bff; */ /* 기존 파란색 제거 */
-            /* background: linear-gradient(135deg, rgba(95, 75, 175, 0.9), rgba(120, 95, 200, 0.9)); */ /* 네비게이션 바와 유사한 그라데이션 적용 */
-            background-color: #007bff; /* 요청하신 파란색으로 배경 변경 */
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 25px 20px; /* 패딩 조정 */
-            margin-top: 30px; /* 네비게이션 바와의 간격 추가 */
-            margin-bottom: 30px;
-            border-radius: 8px; /* 모서리 둥글게 */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 변경: 그림자 약간 더 부드럽게 */
-            /* margin-top: 20px; */ /* Adjusted, body padding will handle this */
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
-        /* .dashboard-header h1 {
-            color: #007bff;  사용자 대시보드 타이틀 파란색으로 변경했었던 규칙 주석 처리 
-        } */
+        .dashboard-header h1 {
+            color: white;
+            font-weight: 700;
+            font-size: 2rem;
+        }
         .summary-card {
             margin-bottom: 20px;
-            border: none; /* 카드 테두리 제거 */
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); /* 변경: 카드 그림자 더 부드럽게 */
-            background-color: #ffffff; /* 카드 배경 흰색 명시 */
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
         }
         .summary-card .card-title {
-            color: #333; /* 카드 제목 색상 명확하게 */
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.1rem;
         }
         .summary-card .card-text.display-4 {
-            color: #4a3f80; /* 주요 수치 색상은 기존 보라색 계열 유지 또는 변경 고려 */
+            color: var(--secondary-color);
+            font-weight: 700;
         }
         .section-title {
-            margin-top: 40px;
-            margin-bottom: 20px;
-            font-size: 1.6rem; /* 폰트 크기 약간 증가 */
-            font-weight: 500;
-            color: #343a40; /* 흰색(#ffffff)에서 어두운 회색으로 변경하여 가독성 확보 */
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--light-bg);
         }
         .table th {
-            color: #333; /* 테이블 헤더 글자색 */
-            background-color: #f8f9fa; /* 테이블 헤더 배경색 */
+            color: var(--primary-color);
+            background-color: rgba(0, 0, 0, 0.05);
+            font-weight: 600;
         }
         .table td {
-            color: #555e68; /* 테이블 셀 글자색 */
+            color: var(--text-color);
+        }
+        .table {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .chart-placeholder {
             height: 200px;
-            background-color: #e9ecef;
+            background: rgba(255, 255, 255, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 5px;
+            border-radius: 10px;
             margin-bottom: 20px;
-            color: #6c757d; /* 차트 플레이스홀더 텍스트 색상 */
+            color: #6c757d;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .review-item {
-            background-color: white;
-            border: 1px solid #e0e0e0; /* 변경: 테두리 색상 연하게 */
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* 변경: 그림자 추가 */
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .review-item h5 {
-            color: #333;
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+        .review-item p {
+             color: var(--text-color);
         }
 
-        /* Navbar styles from index.ejs */
-        .navbar {
-            background: linear-gradient(135deg, rgba(95, 75, 175, 0.95), rgba(120, 95, 200, 0.95)) !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 0.8rem 0;
-            position: fixed; /* Changed to fixed for this page */
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1100;
-            transition: all 0.3s ease;
+        @media (max-width: 768px) {
+            body {
+                padding-top: 60px; /* Adjust for smaller screens */
+            }
+             .dashboard-header h1 {
+                 font-size: 1.5rem;
+             }
+             .section-title {
+                 font-size: 1.5rem;
+                 margin-top: 2rem;
+             }
+             .summary-card .card-title {
+                 font-size: 1rem;
+             }
+             .summary-card .card-text.display-4 {
+                 font-size: 2rem;
+             }
+             .review-item {
+                 padding: 1rem;
+                 margin-bottom: 1rem;
+             }
+             .review-item h5 {
+                 font-size: 1rem;
+             }
         }
-        .navbar-brand {
-            padding: 0.5rem 1rem;
-            transition: all 0.3s ease;
-        }
-        .navbar-brand:hover {
-            transform: scale(1.05);
-        }
-        .navbar-brand .logo {
-            width: 40px;
-            height: auto;
-        }
-        .nav-link {
-            font-size: 1.1rem !important;
-            padding: 0.8rem 1rem !important;
-            color: rgba(255, 255, 255, 0.9) !important;
-            transition: all 0.3s ease !important;
-            position: relative;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
-        .nav-link:hover {
-            color: #ffffff !important;
-        }
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            width: calc(100% - 2rem);
-            height: 2px;
-            background: #ffffff;
-            transform: translateX(-50%) scaleX(0);
-            transition: transform 0.3s ease;
-            transform-origin: center;
-        }
-        .nav-link:hover::after {
-            transform: translateX(-50%) scaleX(1);
-        }
-        .nav-link i {
-            font-size: 1rem;
-            margin-right: 2px;
-        }
-        .nav-link.active::after {
-            transform: translateX(-50%) scaleX(1);
-        }
-        .nav-item {
-            display: flex;
-            align-items: center;
-        }
-        .navbar .btn {
-            padding: 0.6rem 1.2rem;
-            font-size: 1rem;
-            border-radius: 9999px;
-            transition: all 0.3s ease;
-        }
-        .navbar .btn-outline-light {
-            border-width: 2px;
-        }
-        .navbar .btn-outline-light:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-        .navbar .btn-light {
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            font-weight: 500;
-        }
-        .navbar .btn-light:hover {
-            background: #ffffff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .navbar .btn-warning {
-            background: linear-gradient(45deg, #ffc107, #ffb300);
-            border: none;
-            font-weight: 500;
-            color: #000;
-        }
-        .navbar .btn-warning:hover {
-            background: linear-gradient(45deg, #ffb300, #ffa000);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
-        }
-        /* End Navbar styles */
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <!-- 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <img src="/home.png" alt="로고" class="logo">
@@ -200,23 +148,20 @@
                         <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/category"><i class="bi bi-grid"></i> 카테고리</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
                     </li>
-                    <% if (typeof user !== 'undefined' && user) { %>
+                    <% if (user) { %>
                         <li class="nav-item">
-                            <a class="nav-link active" href="/myprofile"><i class="bi bi-person-circle"></i> <%= user.username %>님!</a>
+                            <span class="nav-link active"><i class="bi bi-person"></i> <%= user.username %>님!</span>
                         </li>
                     <% } %>
                 </ul>
                 <div class="d-flex">
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <!-- <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a> -->
-                        <% if (user.role === 'admin') { %>
-                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
-                        <% } %>
+                    <% if (user) {
+                         if (user.role === 'admin') { %>
+                         <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                         <% }
+                         %> <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
                         <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
                     <% } else { %>
                         <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
@@ -228,8 +173,8 @@
     </nav>
 
     <div class="container">
-        <div class="dashboard-header text-center">
-            <h1><span role="img" aria-label="home">🏠</span> 사용자 대시보드</h1>
+        <div class="dashboard-header">
+            <h1><span role="img" aria-label="chart">📊</span> 사용자 대시보드</h1>
         </div>
 
         <!-- 요약 카드 섹션 -->
