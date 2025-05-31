@@ -442,7 +442,7 @@
                                         </div>
                                         <div class="ranking-info">
                                             <div class="ranking-name"><%= user.username %></div>
-                                            <div class="ranking-details">정답률: <%= user.accuracy %>%</div>
+                                            <div class="ranking-details">정답률: <%= user.accuracy !== undefined ? user.accuracy.toFixed(2) + '%' : 'N/A' %></div>
                                         </div>
                                         <div class="ranking-score">
                                             <%= user.correctAnswers %>
@@ -476,7 +476,7 @@
                                         </div>
                                         <div class="ranking-info">
                                             <div class="ranking-name"><%= user.username %></div>
-                                            <div class="ranking-details">평균 점수: <%= user.averageScore %>점</div>
+                                            <div class="ranking-details">평균 점수: <%= user.averageScore !== undefined ? user.averageScore.toFixed(1) + '점' : 'N/A' %></div>
                                         </div>
                                         <div class="ranking-score">
                                             <%= user.completedQuizzes %>
@@ -510,7 +510,7 @@
                                         </div>
                                         <div class="ranking-info">
                                             <div class="ranking-name"><%= quiz.title %></div>
-                                            <div class="ranking-details">카테고리: <%= quiz.category %> | 평균 점수: <%= quiz.averageScore %>점</div>
+                                            <div class="ranking-details">카테고리: <%= quiz.category %> | 평균 점수: <%= quiz.averageScore !== undefined ? quiz.averageScore.toFixed(1) + '점' : 'N/A' %></div>
                                         </div>
                                         <div class="ranking-score">
                                             <%= quiz.participantCount %>
@@ -551,13 +551,28 @@
         });
 
         // 탭 변경 이벤트
+        let currentTab = 'correct-answers'; // 기본 탭
         document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
             tab.addEventListener('shown.bs.tab', function(event) {
-                const targetTab = event.target.getAttribute('data-bs-target');
-                console.log('Active tab:', targetTab);
+                const targetTabId = event.target.getAttribute('data-bs-target').substring(1); // # 제거
+                currentTab = targetTabId;
+                console.log('Active tab:', currentTab);
                 // TODO: 탭 변경 시 해당 랭킹 데이터 로드
+                // 예시: const period = document.querySelector('.period-btn.active').dataset.period;
+                //      fetch(`/api/ranking?period=${period}&type=${currentTab}`)
+                //      .then(response => response.json())
+                //      .then(data => updateRankingUI(data));
             });
         });
+
+        // (선택 사항) UI 업데이트 함수 예시
+        // function updateRankingUI(data) {
+        //     // 1. 현재 활성화된 탭을 찾습니다.
+        //     // 2. 해당 탭 내부의 .ranking-list 를 비웁니다.
+        //     // 3. 받아온 data를 기반으로 새로운 랭킹 아이템들을 생성하여 .ranking-list에 추가합니다.
+        //     // 4. 데이터가 없을 경우 "아직 랭킹 데이터가 없습니다" 메시지를 표시합니다.
+        //     console.log('Updating UI with data:', data);
+        // }
     </script>
 </body>
 </html> 

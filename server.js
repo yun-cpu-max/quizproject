@@ -167,38 +167,110 @@ app.get('/logout', (req, res) => {
 });
 
 // 랭킹 페이지 라우트
-app.get('/ranking', (req, res) => {
-    // 예시 랭킹 데이터 (추후 DB에서 실제 데이터 조회)
-    const exampleRankings = {
-        correctAnswersRanking: [
-            { username: '퀴즈왕123', accuracy: 95, correctAnswers: 150 },
-            { username: '천재게이머', accuracy: 92, correctAnswers: 140 },
-            { username: '상식박사', accuracy: 88, correctAnswers: 130 },
-            { username: '위키피디아', accuracy: 85, correctAnswers: 120 },
-            { username: '알쓸신잡러', accuracy: 80, correctAnswers: 110 },
-        ],
-        completedQuizRanking: [
-            { username: '올클리어', averageScore: 90, completedQuizzes: 25 },
-            { username: '퀴즈마스터', averageScore: 88, completedQuizzes: 22 },
-            { username: '도전자', averageScore: 85, completedQuizzes: 20 },
-            { username: '탐험가', averageScore: 82, completedQuizzes: 18 },
-            { username: '노력파', averageScore: 80, completedQuizzes: 15 },
-        ],
-        popularQuizRanking: [
-            { title: 'สุดยอดแบบทดสอบความรู้ทั่วไป!', category: '상식', averageScore: 85, participantCount: 1250 },
-            { title: '과학 상식 퀴즈 대회', category: '과학', averageScore: 80, participantCount: 1100 },
-            { title: '역사 속 인물 맞추기', category: '역사', averageScore: 78, participantCount: 950 },
-            { title: '스포츠 월드컵 퀴즈', category: '스포츠', averageScore: 88, participantCount: 900 },
-            { title: '최신 영화 & 드라마 퀴즈', category: '엔터테인먼트', averageScore: 75, participantCount: 800 },
-        ]
-    };
+app.get('/ranking', async (req, res) => {
+    const period = req.query.period || 'all'; // 기본값은 'all'
 
-    res.render('ranking', { 
-        user: req.session.user,
-        correctAnswersRanking: exampleRankings.correctAnswersRanking,
-        completedQuizRanking: exampleRankings.completedQuizRanking,
-        popularQuizRanking: exampleRankings.popularQuizRanking
-    });
+    try {
+        // 1. 맞힌 문제 수 랭킹 (correctAnswersRanking)
+        // SUM(qr.score) as correctAnswers: 각 사용자가 맞힌 총 문제 수
+        // AVG(qr.score / qr.total_questions * 100) as accuracy: 사용자별 평균 정답률
+        const correctAnswersQuery = `
+            SELECT 
+                u.username,
+                SUM(qr.score) AS correctAnswers,
+                AVG(qr.score / qr.total_questions * 100) AS accuracy
+            FROM quiz_results qr
+            JOIN user u ON qr.user_id = u.id
+            ${getPeriodCondition('qr.created_at', period)}
+            GROUP BY u.id, u.username
+            ORDER BY correctAnswers DESC, accuracy DESC
+            LIMIT 10; 
+        `;
+
+        // 2. 완료한 퀴즈 수 랭킹 (completedQuizRanking)
+        // COUNT(DISTINCT qr.quiz_id) as completedQuizzes: 사용자별 완료한 총 퀴즈 수
+        // AVG(qr.score) as averageScore: 사용자별 평균 퀴즈 점수
+        const completedQuizQuery = `
+            SELECT 
+                u.username,
+                COUNT(DISTINCT qr.quiz_id) AS completedQuizzes,
+                AVG(qr.score) AS averageScore 
+            FROM quiz_results qr
+            JOIN user u ON qr.user_id = u.id
+            ${getPeriodCondition('qr.created_at', period)}
+            GROUP BY u.id, u.username
+            ORDER BY completedQuizzes DESC, averageScore DESC
+            LIMIT 10;
+        `;
+
+        // 3. 인기 퀴즈 랭킹 (popularQuizRanking)
+        // COUNT(DISTINCT qr.user_id) as participantCount: 퀴즈별 참여자 수 (중복 제거)
+        // AVG(qr.score) as averageScore: 퀴즈별 평균 점수
+        const popularQuizQuery = `
+            SELECT 
+                q.title,
+                q.category,
+                COUNT(DISTINCT qr.user_id) AS participantCount,
+                AVG(qr.score) AS averageScore
+            FROM quiz q
+            LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
+            ${getPeriodCondition('q.created_at', period, true)}
+            GROUP BY q.id, q.title, q.category
+            ORDER BY participantCount DESC, averageScore DESC
+            LIMIT 10;
+        `;
+        
+        // 기간 필터링 SQL 생성 함수
+        function getPeriodCondition(dateField, periodValue, isQuizTable = false) {
+            const baseTableAlias = isQuizTable ? '' : 'WHERE'; // quiz 테이블은 WHERE가 이미 있을 수 있음
+            if (periodValue === 'monthly') {
+                return `${baseTableAlias} ${dateField} >= DATE_SUB(NOW(), INTERVAL 1 MONTH)`;
+            } else if (periodValue === 'weekly') {
+                return `${baseTableAlias} ${dateField} >= DATE_SUB(NOW(), INTERVAL 1 WEEK)`;
+            }
+            return ''; // 'all' 또는 기타: 조건 없음
+        }
+
+        const [correctAnswersRanking, completedQuizRanking, popularQuizRanking] = await Promise.all([
+            new Promise((resolve, reject) => {
+                db.query(correctAnswersQuery, (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results.map(r => ({...r, accuracy: parseFloat(r.accuracy) || 0 })));
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(completedQuizQuery, (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results.map(r => ({...r, averageScore: parseFloat(r.averageScore) || 0 })));
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(popularQuizQuery, (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results.map(r => ({...r, averageScore: parseFloat(r.averageScore) || 0 })));
+                });
+            })
+        ]);
+
+        res.render('ranking', { 
+            user: req.session.user,
+            correctAnswersRanking,
+            completedQuizRanking,
+            popularQuizRanking,
+            period: period // 현재 선택된 기간을 템플릿에 전달
+        });
+
+    } catch (error) {
+        console.error("랭킹 데이터 조회 오류:", error);
+        res.render('ranking', {
+            user: req.session.user,
+            correctAnswersRanking: [],
+            completedQuizRanking: [],
+            popularQuizRanking: [],
+            period: period,
+            error: "랭킹 정보를 불러오는 중 오류가 발생했습니다."
+        });
+    }
 });
 
 // 회원가입 페이지 렌더링
