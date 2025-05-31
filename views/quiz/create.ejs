@@ -298,6 +298,7 @@
     }
 
     function addQuestion() {
+        console.log('Add button clicked');
         if (questionCount >= maxQuestions) {
             alert('최대 30문제까지만 추가할 수 있습니다.');
             return;
@@ -442,10 +443,16 @@
 
     // Initial question add (add minQuestions on load)
     document.addEventListener('DOMContentLoaded', function() {
+         // Add initial questions
          for(let i = 0; i < minQuestions; i++) {
              addQuestion();
          }
          updateQuestionCount(); // Update count after initial add
+
+         // Attach event listener after DOM is loaded
+         if (addQuestionBtn) {
+             addQuestionBtn.addEventListener('click', addQuestion);
+         }
     });
 
     // Function to toggle thumbnail input visibility
