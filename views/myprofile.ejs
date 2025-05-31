@@ -6,102 +6,229 @@
     <title>내 정보 - 맞히기 사이트</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/style.css">
-    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), #6a4bcc);
+            min-height: 100vh;
+        }
+
+        .profile-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .profile-header h3 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--light-bg);
+        }
+
+        .table {
+            margin-bottom: 2rem;
+        }
+
+        .table th {
+            width: 150px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .table td {
+            color: var(--text-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #7a2fe6;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: #10b981;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            border: none;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-info {
+            background: #3b82f6;
+            border: none;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2563eb;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <!-- 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" height="30">
+                <img src="/home.png" alt="로고" class="logo">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">홈</a>
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/notice">공지사항</a>
+                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                    </li>
+                    <% if (user) { %>
+                        <li class="nav-item">
+                            <span class="nav-link active"><i class="bi bi-person"></i> <%= user.username %>님!</span>
+                        </li>
+                    <% } %>
                 </ul>
-                <% if (user) { %>
-                    <div class="user-info">
-                        <a href="/logout" class="btn btn-outline-light">로그아웃</a>
-                    </div>
-                <% } %>
+                <div class="d-flex">
+                    <% if (user) { %>
+                        <a href="/myprofile" class="btn btn-outline-light me-2 active"><i class="bi bi-person-circle"></i> 내정보</a>
+                        <% if (user.role === 'admin') { %>
+                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                        <% } %>
+                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                    <% } else { %>
+                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                    <% } %>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title mb-0">내 정보</h3>
-                    </div>
-                    <div class="card-body">
-                        <% if (user) { %>
-                            <div class="mb-4">
-                                <h4>기본 정보</h4>
-                                <table class="table">
-                                    <tr>
-                                        <th>아이디</th>
-                                        <td><%= user.username %></td>
-                                    </tr>
-                                    <tr>
-                                        <th>이메일</th>
-                                        <td><%= user.email %></td>
-                                    </tr>
-                                    <tr>
-                                        <th>가입일</th>
-                                        <td><%= new Date(user.created_at).toLocaleDateString('ko-KR') %></td>
-                                    </tr>
-                                    <tr>
-                                        <th>계정 상태</th>
-                                        <td><%= user.is_active ? '활성화' : '비활성화' %></td>
-                                    </tr>
-                                </table>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <h4>활동 정보</h4>
-                                <table class="table">
-                                    <tr>
-                                        <th>퀴즈 참여 횟수</th>
-                                        <td>0회</td>
-                                    </tr>
-                                    <tr>
-                                        <th>평균 점수</th>
-                                        <td>0점</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        <% } else { %>
-                            <div class="alert alert-warning">
-                                로그인이 필요합니다.
-                            </div>
-                        <% } %>
-                        
-                        <div class="mt-4">
-                            <button class="btn btn-primary" onclick="location.href='/edit-profile'">내정보 수정</button>
-                            <button class="btn btn-danger" onclick="location.href='/change-password'">비밀번호 변경</button>
-                            <button class="btn btn-success" onclick="location.href='/quiz/create'">퀴즈 신청</button>
-                            <button class="btn btn-warning" onclick="location.href='/quiz/my-quizzes'">
-                                <i class="fas fa-edit"></i> 내가 만든 퀴즈
-                            </button>
-                            <button class="btn btn-info" onclick="location.href='/quiz/dashboard_user'">
-                                <i class="fas fa-gamepad"></i> 나의 퀴즈 활동
-                            </button>
-                        </div>
-                    </div>
+    <div class="container">
+        <div class="profile-container">
+            <div class="profile-header">
+                <h3>내 정보</h3>
+            </div>
+            <% if (user) { %>
+                <div class="mb-4">
+                    <h4 class="section-title">기본 정보</h4>
+                    <table class="table">
+                        <tr>
+                            <th>아이디</th>
+                            <td><%= user.username %></td>
+                        </tr>
+                        <tr>
+                            <th>이메일</th>
+                            <td><%= user.email %></td>
+                        </tr>
+                        <tr>
+                            <th>가입일</th>
+                            <td><%= new Date(user.created_at).toLocaleDateString('ko-KR') %></td>
+                        </tr>
+                        <tr>
+                            <th>계정 상태</th>
+                            <td><%= user.is_active ? '활성화' : '비활성화' %></td>
+                        </tr>
+                    </table>
                 </div>
+                
+                <div class="mb-4">
+                    <h4 class="section-title">활동 정보</h4>
+                    <table class="table">
+                        <tr>
+                            <th>퀴즈 참여 횟수</th>
+                            <td>0회</td>
+                        </tr>
+                        <tr>
+                            <th>평균 점수</th>
+                            <td>0점</td>
+                        </tr>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="alert alert-warning">
+                    로그인이 필요합니다.
+                </div>
+            <% } %>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="location.href='/edit-profile'">
+                    <i class="bi bi-pencil"></i> 내정보 수정
+                </button>
+                <button class="btn btn-danger" onclick="location.href='/change-password'">
+                    <i class="bi bi-key"></i> 비밀번호 변경
+                </button>
+                <button class="btn btn-success" onclick="location.href='/quiz/create'">
+                    <i class="bi bi-plus-circle"></i> 퀴즈 신청
+                </button>
+                <button class="btn btn-warning" onclick="location.href='/quiz/my-quizzes'">
+                    <i class="bi bi-pencil-square"></i> 내가 만든 퀴즈
+                </button>
+                <button class="btn btn-info" onclick="location.href='/quiz/dashboard_user'">
+                    <i class="bi bi-graph-up"></i> 나의 퀴즈 활동
+                </button>
             </div>
         </div>
     </div>
