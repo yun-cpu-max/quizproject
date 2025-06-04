@@ -306,27 +306,6 @@ router.post('/submit', async (req, res) => {
     }
 });
 
-// 개별 문제 결과 페이지
-router.get('/result/:id', (req, res) => {
-    const isCorrect = req.query.correct === 'true';
-    const quizId = parseInt(req.params.id);
-    const nextQuizId = quizId + 1;
-    const totalQuizzes = 10; // 실제로는 DB에서 가져와야 함
-    
-    // 마지막 문제인 경우
-    if (quizId >= totalQuizzes) {
-        res.redirect('/quiz/final-result');
-        return;
-    }
-    
-    res.render('quiz/question-result', {
-        user: req.session.user,
-        isCorrect: isCorrect,
-        nextQuizId: nextQuizId,
-        currentQuizId: quizId,
-        totalQuizzes: totalQuizzes
-    });
-});
 
 // 최종 결과 페이지
 router.get('/final-result', async (req, res) => {
