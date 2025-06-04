@@ -273,6 +273,95 @@ app.get('/ranking', async (req, res) => {
     }
 });
 
+// AJAX 요청을 위한 랭킹 API 엔드포인트
+app.get('/api/ranking', async (req, res) => {
+    const period = req.query.period || 'all';
+    const type = req.query.type; // 'correctAnswers', 'completedQuiz', 'popularQuiz'
+
+    if (!type) {
+        return res.status(400).json({ error: '랭킹 타입을 지정해야 합니다.' });
+    }
+
+    // 기간 필터링 SQL 생성 함수 (server.js 내에 이미 존재해야 함)
+    // 만약 별도 파일이나 스코프에 있다면, 접근 가능하도록 수정 필요
+    function getPeriodCondition(dateField, periodValue, isQuizTable = false) {
+        const baseTableAlias = isQuizTable ? '' : 'WHERE'; 
+        if (periodValue === 'monthly') {
+            return `${baseTableAlias} ${dateField} >= DATE_SUB(NOW(), INTERVAL 1 MONTH)`;
+        } else if (periodValue === 'weekly') {
+            return `${baseTableAlias} ${dateField} >= DATE_SUB(NOW(), INTERVAL 1 WEEK)`;
+        }
+        return ''; 
+    }
+
+    let query = '';
+    let queryParams = []; // 쿼리 파라미터 (필요시 사용)
+
+    try {
+        if (type === 'correctAnswers') {
+            query = `
+                SELECT 
+                    u.username,
+                    SUM(qr.score) AS correctAnswers,
+                    AVG(qr.score / qr.total_questions * 100) AS accuracy
+                FROM quiz_results qr
+                JOIN user u ON qr.user_id = u.id
+                ${getPeriodCondition('qr.created_at', period)}
+                GROUP BY u.id, u.username
+                ORDER BY correctAnswers DESC, accuracy DESC
+                LIMIT 10;
+            `;
+        } else if (type === 'completedQuiz') {
+            query = `
+                SELECT 
+                    u.username,
+                    COUNT(DISTINCT qr.quiz_id) AS completedQuizzes,
+                    AVG(qr.score) AS averageScore 
+                FROM quiz_results qr
+                JOIN user u ON qr.user_id = u.id
+                ${getPeriodCondition('qr.created_at', period)}
+                GROUP BY u.id, u.username
+                ORDER BY completedQuizzes DESC, averageScore DESC
+                LIMIT 10;
+            `;
+        } else if (type === 'popularQuiz') {
+            query = `
+                SELECT 
+                    q.title,
+                    q.category,
+                    COUNT(DISTINCT qr.user_id) AS participantCount,
+                    AVG(qr.score) AS averageScore
+                FROM quiz q
+                LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
+                ${getPeriodCondition('q.created_at', period, true)}
+                GROUP BY q.id, q.title, q.category
+                ORDER BY participantCount DESC, averageScore DESC
+                LIMIT 10;
+            `;
+        } else {
+            return res.status(400).json({ error: '잘못된 랭킹 타입입니다.' });
+        }
+
+        db.query(query, queryParams, (err, results) => {
+            if (err) {
+                console.error('API 랭킹 조회 실패:', err);
+                return res.status(500).json({ error: '서버 오류로 랭킹 정보를 가져올 수 없습니다.' });
+            }
+            // 숫자 필드를 적절히 포맷팅 (기존 /ranking 라우트와 유사하게)
+            const formattedResults = results.map(r => {
+                if (r.accuracy !== undefined) r.accuracy = parseFloat(r.accuracy) || 0;
+                if (r.averageScore !== undefined) r.averageScore = parseFloat(r.averageScore) || 0;
+                return r;
+            });
+            res.json(formattedResults);
+        });
+
+    } catch (error) {
+        console.error("API 랭킹 데이터 조회 오류:", error);
+        res.status(500).json({ error: "랭킹 정보를 불러오는 중 오류가 발생했습니다." });
+    }
+});
+
 // 회원가입 페이지 렌더링
 app.get('/signup', (req, res) => {
     res.render('signup', { error: null });
