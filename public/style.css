@@ -450,3 +450,102 @@ body {
     opacity: 0.95;
     letter-spacing: 0.02em;
 }
+
+/* Styles specific to my-quizzes.ejs page */
+.my-quizzes-page-specific-styles {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    min-height: 100vh;
+}
+
+/* Adjust main container padding for sticky navbar */
+.my-quizzes-page-specific-styles .container.py-5 {
+    padding-top: calc(84px + 1.5rem) !important; /* Navbar height (84px) + desired spacing (1.5rem) */
+}
+
+.my-quizzes-page-specific-styles .quiz-card {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    background: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.my-quizzes-page-specific-styles .quiz-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.my-quizzes-page-specific-styles .quiz-title { /* This is for the H2 "내가 만든 퀴즈" */
+    font-weight: bold;
+    color: #5a189a;
+}
+
+.my-quizzes-page-specific-styles .quiz-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 12px 12px 0 0;
+}
+
+.my-quizzes-page-specific-styles .btn-edit {
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    border: none;
+    color: white;
+}
+
+.my-quizzes-page-specific-styles .btn-edit:hover {
+    background: linear-gradient(45deg, #e67e22, #d35400);
+    color: white;
+}
+
+.my-quizzes-page-specific-styles .btn-view {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    border: none;
+    color: white;
+}
+
+.my-quizzes-page-specific-styles .btn-view:hover {
+    background: linear-gradient(45deg, #2980b9, #1f4e79);
+    color: white;
+}
+
+.my-quizzes-page-specific-styles .fixed-button { /* This is for "내정보로 가기" */
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1200;
+}
+
+.my-quizzes-page-specific-styles .stats-badge {
+    background: rgba(90, 24, 154, 0.1);
+    color: #5a189a;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+}
+
+/* Category badge specific to my-quizzes page, overriding the global one if names clash and specificity is higher */
+.my-quizzes-page-specific-styles .category-badge { 
+    background: linear-gradient(45deg, #10B981, #059669);
+    color: white;
+    border-radius: 20px; /* Overrides the global 999px for this page */
+    padding: 4px 12px; /* Overrides global padding for this page */
+    font-size: 0.85rem; /* Overrides global font-size for this page */
+    /* box-shadow, opacity, letter-spacing will be inherited from global .category-badge if not specified here */
+}
+
+.my-quizzes-page-specific-styles .alert { 
+    margin-top: 0; /* Adjusted for navbar and container padding */
+}
+
+@media (max-width: 768px) {
+    .my-quizzes-page-specific-styles .alert {
+        margin-top: 50px;
+    }
+
+    .my-quizzes-page-specific-styles .fixed-button {
+        top: 10px;
+        left: 10px;
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
