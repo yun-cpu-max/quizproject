@@ -1,0 +1,157 @@
+<!-- Bootstrap 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="/home.png" alt="로고" class="logo">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                </li>
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <li class="nav-item">
+                        <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
+                    </li>
+                <% } %>
+            </ul>
+            <div class="d-flex align-items-center">
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <!-- 알림창 버튼 -->
+                    <div class="dropdown me-2">
+                        <button class="btn btn-outline-light notification-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="알림">
+                            <i class="bi bi-bell"></i>
+                            <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown">
+                            <li class="dropdown-header">
+                                <i class="bi bi-bell me-2"></i>알림
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li id="notificationList">
+                                <div class="dropdown-item-text text-center text-muted py-3">
+                                    <i class="bi bi-bell-slash display-6 d-block mb-2"></i>
+                                    알림이 없습니다
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
+                    <% if (user.role === 'admin') { %>
+                    <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                    <% } %>
+                    <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                <% } else { %>
+                    <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                    <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 알림 기능을 위한 스크립트 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 알림 데이터 가져오기 (예시 - 실제로는 서버에서 가져와야 함)
+    function loadNotifications() {
+        // 임시 알림 데이터 (나중에 실제 API 호출로 대체)
+        const notifications = [
+            {
+                id: 1,
+                title: "새로운 퀴즈가 등록되었습니다",
+                message: "역사 카테고리에 새로운 퀴즈가 추가되었습니다.",
+                time: "5분 전",
+                read: false
+            },
+            {
+                id: 2,
+                title: "랭킹 업데이트",
+                message: "이번 주 랭킹이 업데이트되었습니다.",
+                time: "1시간 전",
+                read: false
+            }
+        ];
+        
+        updateNotificationUI(notifications);
+    }
+    
+    function updateNotificationUI(notifications) {
+        const badge = document.getElementById('notificationBadge');
+        const notificationList = document.getElementById('notificationList');
+        
+        const unreadCount = notifications.filter(n => !n.read).length;
+        
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+        
+        if (notifications.length > 0) {
+            notificationList.innerHTML = notifications.map(notification => `
+                <li>
+                    <a class="dropdown-item notification-item ${!notification.read ? 'unread' : ''}" href="#" data-id="${notification.id}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <strong class="mb-1">${notification.title}</strong>
+                            <small class="text-muted">${notification.time}</small>
+                        </div>
+                        <p class="mb-1">${notification.message}</p>
+                        ${!notification.read ? '<span class="badge bg-primary rounded-pill">새로움</span>' : ''}
+                    </a>
+                </li>
+            `).join('') + `
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center" href="/notifications">모든 알림 보기</a></li>
+            `;
+        }
+    }
+    
+    // 알림 클릭 시 읽음 처리
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.notification-item')) {
+            const item = e.target.closest('.notification-item');
+            const notificationId = item.getAttribute('data-id');
+            
+            // 여기서 서버에 읽음 처리 API 호출
+            // markAsRead(notificationId);
+            
+            item.classList.remove('unread');
+            const badge = item.querySelector('.badge');
+            if (badge) badge.remove();
+            
+            // 배지 업데이트
+            updateNotificationBadge();
+        }
+    });
+    
+    function updateNotificationBadge() {
+        const unreadItems = document.querySelectorAll('.notification-item.unread');
+        const badge = document.getElementById('notificationBadge');
+        
+        if (unreadItems.length > 0) {
+            badge.textContent = unreadItems.length > 99 ? '99+' : unreadItems.length;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    // 초기 알림 로드
+    loadNotifications();
+    
+    // 30초마다 알림 업데이트 (선택사항)
+    setInterval(loadNotifications, 30000);
+});
+</script> 
