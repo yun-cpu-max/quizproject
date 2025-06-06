@@ -18,9 +18,9 @@ router.get('/', async (req, res) => {
     const quizSearchId = req.query.quizSearchId || '';
     const quizSearchTitle = req.query.quizSearchTitle || '';
 
-    // pending_quiz 테이블에서 대기 퀴즈 전체 조회
-    db.query('SELECT * FROM pending_quiz', (err, pendingQuizzes) => {
-        if (err) return res.send('대기 퀴즈 조회 오류');
+    // pending_quiz 테이블에서 대기 퀴즈 전체 조회 (신청자 이름 포함)
+    db.query('SELECT pending_quiz.*, user.username FROM pending_quiz JOIN user ON pending_quiz.created_by = user.id', (err, pendingQuizzes) => {
+        if (err) return res.send('대기 퀴즈 조회 오류: ' + err.message);
 
         // 퀴즈 데이터 파싱
         pendingQuizzes = pendingQuizzes.map(quiz => {
@@ -128,6 +128,80 @@ router.get('/', async (req, res) => {
             });
         });
     });
+});
+
+// 특정 퀴즈 상세 정보 조회
+router.get('/quizzes/:id', async (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const quizId = parseInt(req.params.id);
+    if (isNaN(quizId)) {
+        return res.status(400).json({ message: 'Invalid quiz ID' });
+    }
+
+    try {
+        // 1. 퀴즈 기본 정보 조회
+        const quizResult = await new Promise((resolve, reject) => {
+            db.query('SELECT id, category, title, description FROM quiz WHERE id = ?', [quizId], (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        });
+
+        if (quizResult.length === 0) {
+            return res.status(404).json({ message: 'Quiz not found' });
+        }
+
+        const quiz = quizResult[0];
+        const questions = [];
+
+        // 2. 해당 퀴즈의 문제 목록 조회
+        const questionsResult = await new Promise((resolve, reject) => {
+            db.query('SELECT id, question, question_type, correct_answer, question_img_url FROM question WHERE quiz_id = ?', [quizId], (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        });
+
+        // 3. 각 문제에 대한 상세 정보 (객관식 보기 등) 조회
+        for (const question of questionsResult) {
+            let options = null;
+            if (question.question_type === 'multiple_choice') {
+                options = await new Promise((resolve, reject) => {
+                    db.query('SELECT id, option_text, is_correct, option_order FROM question_option WHERE question_id = ? ORDER BY option_order', [question.id], (err, results) => {
+                        if (err) return reject(err);
+                        resolve(results);
+                    });
+                });
+                 // is_correct가 1인 option의 option_order를 correct로 사용
+                 const correctOption = options.find(opt => opt.is_correct);
+                 question.correct = correctOption ? correctOption.option_order : null;
+                 question.options = options.map(opt => ({ num: opt.option_order, text: opt.option_text }));
+                 // question 테이블의 correct_answer는 주관식에만 사용되므로 객관식에선 null 또는 undefined 처리
+                 delete question.correct_answer; // 불필요한 정보 제거
+
+            } else if (question.question_type === 'short_answer') {
+                 // 주관식은 options 필요 없음
+                 // question 테이블의 correct_answer를 answer로 사용
+                 question.answer = question.correct_answer;
+                 delete question.correct_answer; // 필드 이름 통일
+            }
+             // 공통 필드 이름 통일
+             question.text = question.question;
+             delete question.question; // 필드 이름 통일
+
+            questions.push(question);
+        }
+
+        // 4. 최종 데이터 응답
+        res.json({ ...quiz, questions });
+
+    } catch (err) {
+        console.error('Error fetching quiz details:', err);
+        res.status(500).json({ message: 'Error fetching quiz details' });
+    }
 });
 
 // 퀴즈 승인

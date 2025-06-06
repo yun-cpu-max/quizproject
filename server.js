@@ -344,14 +344,14 @@ app.post('/edit-profile', (req, res) => {
         return res.redirect('/login');
     }
 
-    const { username, email, currentPassword } = req.body;
+    const { username, email } = req.body;
     const userId = req.session.user.id;
 
-    // 현재 비밀번호 확인
-    const checkPasswordQuery = 'SELECT * FROM user WHERE id = ? AND password = ?';
-    db.query(checkPasswordQuery, [userId, currentPassword], (err, results) => {
+    // 중복 확인 (자신의 아이디는 제외)
+    const checkQuery = 'SELECT * FROM user WHERE (username = ? OR email = ?) AND id != ?';
+    db.query(checkQuery, [username, email, userId], (err, results) => {
         if (err) {
-            console.error('비밀번호 확인 실패:', err);
+            console.error('중복 확인 실패:', err);
             return res.render('edit-profile', {
                 user: req.session.user,
                 error: '서버 오류가 발생했습니다.',
@@ -359,55 +359,34 @@ app.post('/edit-profile', (req, res) => {
             });
         }
 
-        if (results.length === 0) {
+        if (results.length > 0) {
             return res.render('edit-profile', {
                 user: req.session.user,
-                error: '현재 비밀번호가 일치하지 않습니다.',
+                error: '이미 사용 중인 아이디 또는 이메일입니다.',
                 success: null
             });
         }
 
-        // 중복 확인 (자신의 아이디는 제외)
-        const checkQuery = 'SELECT * FROM user WHERE (username = ? OR email = ?) AND id != ?';
-        db.query(checkQuery, [username, email, userId], (err, results) => {
+        // 정보 업데이트
+        const updateQuery = 'UPDATE user SET username = ?, email = ?, updated_at = NOW() WHERE id = ?';
+        db.query(updateQuery, [username, email, userId], (err, result) => {
             if (err) {
-                console.error('중복 확인 실패:', err);
+                console.error('정보 수정 실패:', err);
                 return res.render('edit-profile', {
                     user: req.session.user,
-                    error: '서버 오류가 발생했습니다.',
+                    error: '정보 수정 중 오류가 발생했습니다.',
                     success: null
                 });
             }
 
-            if (results.length > 0) {
-                return res.render('edit-profile', {
-                    user: req.session.user,
-                    error: '이미 사용 중인 아이디 또는 이메일입니다.',
-                    success: null
-                });
-            }
-
-            // 정보 업데이트
-            const updateQuery = 'UPDATE user SET username = ?, email = ?, updated_at = NOW() WHERE id = ?';
-            db.query(updateQuery, [username, email, userId], (err, result) => {
-                if (err) {
-                    console.error('정보 수정 실패:', err);
-                    return res.render('edit-profile', {
-                        user: req.session.user,
-                        error: '정보 수정 중 오류가 발생했습니다.',
-                        success: null
-                    });
-                }
-
-                // 세션 업데이트
-                req.session.user.username = username;
-                req.session.user.email = email;
-                
-                res.render('edit-profile', {
-                    user: req.session.user,
-                    error: null,
-                    success: '정보가 성공적으로 수정되었습니다.'
-                });
+            // 세션 업데이트
+            req.session.user.username = username;
+            req.session.user.email = email;
+            
+            res.render('edit-profile', {
+                user: req.session.user,
+                error: null,
+                success: '정보가 성공적으로 수정되었습니다.'
             });
         });
     });
