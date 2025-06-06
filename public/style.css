@@ -756,3 +756,8 @@ body {
         padding: 0.4rem 0.8rem;
     }
 }
+
+/* Admin page modal adjustments */
+.modal-dialog {
+    margin-top: 100px; /* Adjust this value if needed */
+}

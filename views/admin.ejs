@@ -97,8 +97,19 @@
             color: var(--primary-color);
             font-weight: 600;
         }
+        
+        .view-quiz-link  {
+            color: var(--secondary-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
 
-        .quiz-title-link {
+        .view-quiz-link:hover {
+            color: #7a2fe6;
+            text-decoration: underline;
+        }
+        .quiz-title-link  {
             color: var(--secondary-color);
             text-decoration: none;
             transition: all 0.3s ease;
@@ -109,6 +120,7 @@
             color: #7a2fe6;
             text-decoration: underline;
         }
+        
 
         .pagination {
             margin-top: 1.5rem;
@@ -254,7 +266,7 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>제목</th><th>카테고리</th><th>승인/거절</th>
+                            <th>제목</th><th>카테고리</th><th>신청자</th><th>승인/거절</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -270,6 +282,7 @@
                                     </a>
                                 </td>
                                 <td><%= quiz.category %></td>
+                                <td><%= quiz.username %></td>
                                 <td>
                                     <form action="/admin/approve" method="POST" style="display:inline;">
                                         <input type="hidden" name="idx" value="<%= quiz.id %>">
@@ -353,14 +366,22 @@
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr><th>ID</th><th>제목</th><th>카테고리</th></tr>
+                        <tr><th>ID</th><th>제목</th><th>카테고리</th><th>퀴즈정보</th></tr>
                     </thead>
                     <tbody>
-                        <% quizzes.forEach(quiz => { %>
+                        <% quizzes.forEach(quiz => {
+                            // Ensure quiz object is not null or undefined
+                            if (!quiz) return;
+                        %>
                             <tr>
                                 <td><%= quiz.id %></td>
                                 <td><%= quiz.title %></td>
                                 <td><%= quiz.category %></td>
+                                <td>
+                                    <a href="#" class="view-quiz-link" data-bs-toggle="modal" data-bs-target="#quizModal" data-quiz-id="<%= quiz.id %>">
+                                        문제보기
+                                    </a>
+                                </td>
                             </tr>
                         <% }) %>
                     </tbody>
@@ -578,21 +599,24 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const quizModal = document.getElementById('quizModal');
-        const quizTitleLinks = document.querySelectorAll('.quiz-title-link');
+        const pendingQuizTitleLinks = document.querySelectorAll('.quiz-title-link');
+        const viewQuizLinks = document.querySelectorAll('.view-quiz-link'); // 모든 퀴즈 정보 링크
         
-        quizTitleLinks.forEach(link => {
+        // 승인 대기 퀴즈 링크 클릭 이벤트 (기존 로직 유지)
+        pendingQuizTitleLinks.forEach(link => {
             link.addEventListener('click', function() {
                 const quizId = this.dataset.quizId;
                 const quizTitle = this.dataset.quizTitle;
-                const quizCategory = this.dataset.quizCategory;
+                const quizCategory = this.dataset.quizCategory; // data-quiz-category 대신 data-category 사용 가정
                 const quizDescription = this.dataset.quizDescription;
                 let quizQuestions;
                 
                 try {
+                    // 이미 JSON.stringify로 인코딩된 데이터 사용
                     quizQuestions = JSON.parse(this.dataset.quizQuestions);
-                    console.log('퀴즈 데이터:', quizQuestions); // 디버깅용 로그
+                    console.log('대기 퀴즈 데이터:', quizQuestions); // 디버깅용 로그
                 } catch (e) {
-                    console.error('퀴즈 데이터 파싱 오류:', e);
+                    console.error('대기 퀴즈 데이터 파싱 오류:', e);
                     quizQuestions = [];
                 }
                 
@@ -611,12 +635,15 @@
                         questionDiv.className = 'mb-3 p-3 border rounded';
                         
                         let questionHtml = `<h6>문제 ${index + 1}</h6>`;
-                        questionHtml += `<p class="mb-3">${question.text || ''}</p>`;
-                        
-                        if (question.option1) {
-                            // 객관식 문제
+                        questionHtml += `<p class="mb-3">${question.text || question.question || ''}</p>`; // text 또는 question 필드 사용
+                         // 문제 이미지 표시
+                        if (question.question_img_url) {
+                             questionHtml += `<img src="${question.question_img_url}" alt="문제 이미지" style="max-width: 100%; height: auto; margin-bottom: 10px;">`;
+                        }
+
+                        if (question.option1 || (question.options && question.options.length > 0)) { // 객관식
                             questionHtml += '<div class="options">';
-                            const options = [
+                            const options = question.options || [
                                 { num: 1, text: question.option1 },
                                 { num: 2, text: question.option2 },
                                 { num: 3, text: question.option3 },
@@ -624,6 +651,8 @@
                             ];
                             
                             options.forEach(opt => {
+                                // 대기 퀴즈는 correct가 숫자 인덱스, 승인 퀴즈는 is_correct 플래그나 option_order 사용 가능
+                                // 여기서는 일단 대기 퀴즈의 correct 기준
                                 const isCorrect = parseInt(question.correct) === opt.num;
                                 questionHtml += `
                                     <div class="option mb-2 ${isCorrect ? 'text-success fw-bold' : ''}">
@@ -632,12 +661,12 @@
                                     </div>`;
                             });
                             questionHtml += '</div>';
-                        } else if (question.answer) {
-                            // 주관식 문제
+                        } else if (question.answer || question.correct_answer) { // 주관식
+                            const answerText = question.answer || question.correct_answer || '';
                             questionHtml += `
                                 <div class="answer">
                                     <strong>정답:</strong> 
-                                    <span class="text-success fw-bold">${question.answer}</span>
+                                    <span class="text-success fw-bold">${answerText}</span>
                                 </div>`;
                         }
                         
@@ -649,6 +678,95 @@
                 }
             });
         });
+
+        // 모든 퀴즈 정보 링크 클릭 이벤트 (새로 추가)
+        viewQuizLinks.forEach(link => {
+            link.addEventListener('click', async function(event) {
+                event.preventDefault(); // 기본 링크 동작 방지
+                const quizId = this.dataset.quizId;
+
+                try {
+                    const response = await fetch(`/admin/quizzes/${quizId}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const quizData = await response.json();
+                    console.log('모든 퀴즈 상세 데이터:', quizData); // 디버깅용 로그
+
+                    // 모달에 데이터 채우기
+                    document.getElementById('modalQuizTitle').textContent = quizData.title;
+                    document.getElementById('modalQuizCategory').textContent = quizData.category;
+                    document.getElementById('modalQuizDescription').textContent = quizData.description;
+
+                    const questionsContainer = document.getElementById('modalQuizQuestions');
+                    questionsContainer.innerHTML = ''; // 기존 내용 초기화
+
+                    if (Array.isArray(quizData.questions)) {
+                        quizData.questions.forEach((question, index) => {
+                            const questionDiv = document.createElement('div');
+                            questionDiv.className = 'mb-3 p-3 border rounded';
+
+                            let questionHtml = `<h6>문제 ${index + 1}</h6>`;
+                            questionHtml += `<p class="mb-3">${question.text || ''}</p>`;
+                             // 문제 이미지 표시
+                            if (question.question_img_url) {
+                                 questionHtml += `<img src="${question.question_img_url}" alt="문제 이미지" style="max-width: 100%; height: auto; margin-bottom: 10px;">`;
+                            }
+
+                            if (question.question_type === 'multiple_choice' && question.options) { // 객관식
+                                questionHtml += '<div class="options">';
+                                question.options.forEach(opt => {
+                                    // 승인 퀴즈 데이터에서는 correct 속성에 option_order가 저장되어 있음
+                                    const isCorrect = parseInt(question.correct) === opt.num;
+                                    questionHtml += `
+                                        <div class="option mb-2 ${isCorrect ? 'text-success fw-bold' : ''}">
+                                            ${opt.num}. ${opt.text || ''}
+                                            ${isCorrect ? ' ✓' : ''}
+                                        </div>`;
+                                });
+                                questionHtml += '</div>';
+                            } else if (question.question_type === 'short_answer') { // 주관식
+                                questionHtml += `
+                                    <div class="answer">
+                                        <strong>정답:</strong> 
+                                        <span class="text-success fw-bold">${question.answer || ''}</span>
+                                    </div>`;
+                            }
+
+                            questionDiv.innerHTML = questionHtml;
+                            questionsContainer.appendChild(questionDiv);
+                        });
+                    } else {
+                        questionsContainer.innerHTML = '<p class="text-danger">문제 데이터를 불러올 수 없습니다.</p>';
+                    }
+
+                    // 모달 열기
+                    const modal = new bootstrap.Modal(quizModal);
+                    modal.show();
+
+                } catch (error) {
+                    console.error('Error fetching quiz details:', error);
+                    // 오류 발생 시 사용자에게 알림 등을 제공할 수 있습니다.
+                    alert('퀴즈 상세 정보를 불러오는데 실패했습니다.');
+                }
+            });
+        });
+
+         // 모달이 닫힐 때 내용 초기화 (선택 사항)
+         quizModal.addEventListener('hidden.bs.modal', function () {
+             document.getElementById('modalQuizTitle').textContent = '';
+             document.getElementById('modalQuizCategory').textContent = '';
+             document.getElementById('modalQuizDescription').textContent = '';
+             document.getElementById('modalQuizQuestions').innerHTML = '';
+
+             // 모달 배경 및 body 클래스 강제 제거 (문제 해결 시도)
+             const backdrops = document.getElementsByClassName('modal-backdrop');
+             while(backdrops.length > 0){
+                 backdrops[0].parentNode.removeChild(backdrops[0]);
+             }
+             document.body.classList.remove('modal-open');
+             document.body.style.overflow = ''; // 스크롤 복원
+         });
 
         // 알림 등록 기능
         const targetTypeSelect = document.getElementById('targetType');
