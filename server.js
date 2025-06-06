@@ -772,7 +772,36 @@ app.post('/quiz/create', upload.single('thumbnailImage'), (req, res) => {
     });
 });
 
+// 오래된 알림 정리 함수
+function cleanupOldNotifications() {
+    // 30일 이상 된 읽은 알림 삭제
+    const cleanupQuery = `
+        DELETE un FROM user_notifications un
+        JOIN notifications n ON un.notification_id = n.id
+        WHERE un.is_read = 1 
+        AND n.created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+    `;
+    
+    db.query(cleanupQuery, [], (err, result) => {
+        if (err) {
+            console.error('알림 정리 실패:', err);
+            return;
+        }
+        if (result.affectedRows > 0) {
+            console.log(`${result.affectedRows}개의 오래된 읽은 알림을 정리했습니다.`);
+        }
+    });
+}
+
 // 서버 실행
-app.listen(PORT, () => console.log(`서버 실행 중입니다: http://localhost:${PORT}`));
+app.listen(PORT, () => {
+    console.log(`서버 실행 중입니다: http://localhost:${PORT}`);
+    
+    // 서버 시작 시 한 번 정리 실행
+    cleanupOldNotifications();
+    
+    // 매일 자정에 정리 작업 실행 (24시간마다)
+    setInterval(cleanupOldNotifications, 24 * 60 * 60 * 1000);
+});
 
 module.exports.db = db;
