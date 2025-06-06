@@ -7,8 +7,6 @@ const fs = require('fs');
 // 알림 발송 헬퍼 함수
 function sendNotificationToUser(userId, title, message, priority = 0, createdBy = 1) {
     return new Promise((resolve, reject) => {
-        console.log(`[알림 발송] 대상 유저 ID: ${userId}, 제목: ${title}, 우선순위: ${priority}, 생성자: ${createdBy}`);
-        
         const insertNotificationQuery = `
             INSERT INTO notifications (title, message, notification_type, priority, is_system_wide, created_by)
             VALUES (?, ?, 'info', ?, 0, ?)
@@ -16,12 +14,10 @@ function sendNotificationToUser(userId, title, message, priority = 0, createdBy 
         
         db.query(insertNotificationQuery, [title, message, priority, createdBy], (err, result) => {
             if (err) {
-                console.error('[알림 발송] 알림 생성 실패:', err);
                 return reject(err);
             }
             
             const notificationId = result.insertId;
-            console.log(`[알림 발송] 알림 생성 성공, ID: ${notificationId}`);
             
             const insertUserNotificationQuery = `
                 INSERT INTO user_notifications (user_id, notification_id, is_read)
@@ -30,10 +26,8 @@ function sendNotificationToUser(userId, title, message, priority = 0, createdBy 
             
             db.query(insertUserNotificationQuery, [userId, notificationId], (err) => {
                 if (err) {
-                    console.error('[알림 발송] 유저 알림 등록 실패:', err);
                     return reject(err);
                 }
-                console.log(`[알림 발송] 유저 알림 등록 성공, 유저 ID: ${userId}, 알림 ID: ${notificationId}`);
                 resolve(notificationId);
             });
         });
@@ -42,7 +36,6 @@ function sendNotificationToUser(userId, title, message, priority = 0, createdBy 
 
 // 관리자 페이지
 router.get('/', async (req, res) => {
-    console.log('[관리자 페이지] 접근됨');
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.redirect('/');
     }
@@ -404,7 +397,6 @@ router.post('/reject', async (req, res) => {
     }
     const id = parseInt(req.body.idx);
     const rejectReason = req.body.rejectReason || '승인 기준에 부합하지 않습니다.';
-    console.log(`[퀴즈 거절] 관리자 ID: ${req.session.user.id}, 퀴즈 ID: ${id}, 거절 사유: ${rejectReason}`);
 
     // 1. pending_quiz에서 해당 퀴즈 데이터 조회
     db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], async (err, results) => {
@@ -415,7 +407,6 @@ router.post('/reject', async (req, res) => {
             return;
         }
         const quiz = results[0];
-        console.log(`[퀴즈 거절] 퀴즈 정보 - 제목: ${quiz.title}, 작성자 ID: ${quiz.created_by}`);
         
         // 퀴즈 작성자에게 거절 알림 발송
         try {
@@ -423,7 +414,6 @@ router.post('/reject', async (req, res) => {
             const notificationMessage = `${quiz.title} 퀴즈가 거절되었습니다.\n\n거절 사유: ${rejectReason}`;
             
             await sendNotificationToUser(quiz.created_by, notificationTitle, notificationMessage, 1, req.session.user.id);
-            console.log('퀴즈 거절 알림 발송 완료:', quiz.created_by);
         } catch (notificationError) {
             console.error('퀴즈 거절 알림 발송 실패:', notificationError);
         }

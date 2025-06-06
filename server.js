@@ -483,22 +483,17 @@ app.delete('/api/notifications/read', (req, res) => {
     }
 
     const userId = req.session.user.id;
-    console.log(`[읽은 알림 삭제] 사용자 ID: ${userId}`);
     
     const query = `
         DELETE FROM user_notifications 
         WHERE user_id = ? AND is_read = 1
     `;
-    
-    console.log('[읽은 알림 삭제] 실행할 쿼리:', query);
 
     db.query(query, [userId], (err, results) => {
         if (err) {
-            console.error('[읽은 알림 삭제] 데이터베이스 오류:', err);
             return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
         }
 
-        console.log(`[읽은 알림 삭제] 영향받은 행 수: ${results.affectedRows}`);
         res.json({ success: true, deletedCount: results.affectedRows });
     });
 });
@@ -511,11 +506,8 @@ app.delete('/api/notifications', (req, res) => {
 
     const userId = req.session.user.id;
     const { notificationIds } = req.body;
-    
-    console.log(`[선택 삭제] 사용자 ID: ${userId}, 알림 IDs:`, notificationIds);
 
     if (!notificationIds || !Array.isArray(notificationIds) || notificationIds.length === 0) {
-        console.log('[선택 삭제] 잘못된 요청 데이터');
         return res.status(400).json({ error: '삭제할 알림을 선택해주세요.' });
     }
 
@@ -524,17 +516,12 @@ app.delete('/api/notifications', (req, res) => {
         DELETE FROM user_notifications 
         WHERE user_id = ? AND notification_id IN (${placeholders})
     `;
-    
-    console.log('[선택 삭제] 실행할 쿼리:', query);
-    console.log('[선택 삭제] 쿼리 파라미터:', [userId, ...notificationIds]);
 
     db.query(query, [userId, ...notificationIds], (err, results) => {
         if (err) {
-            console.error('[선택 삭제] 데이터베이스 오류:', err);
             return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
         }
 
-        console.log(`[선택 삭제] 영향받은 행 수: ${results.affectedRows}`);
         res.json({ success: true, deletedCount: results.affectedRows });
     });
 });
@@ -547,8 +534,6 @@ app.delete('/api/notifications/:id', (req, res) => {
 
     const userId = req.session.user.id;
     const notificationId = req.params.id;
-    
-    console.log(`[개별 삭제] 사용자 ID: ${userId}, 알림 ID: ${notificationId}`);
 
     const query = `
         DELETE FROM user_notifications 
@@ -557,18 +542,13 @@ app.delete('/api/notifications/:id', (req, res) => {
 
     db.query(query, [userId, notificationId], (err, results) => {
         if (err) {
-            console.error('[개별 삭제] 데이터베이스 오류:', err);
             return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
         }
-
-        console.log(`[개별 삭제] 영향받은 행 수: ${results.affectedRows}`);
         
         if (results.affectedRows === 0) {
-            console.log('[개별 삭제] 삭제할 알림을 찾을 수 없음');
             return res.status(404).json({ error: '알림을 찾을 수 없습니다.' });
         }
 
-        console.log('[개별 삭제] 성공적으로 삭제됨');
         res.json({ success: true, deletedCount: results.affectedRows });
     });
 });
