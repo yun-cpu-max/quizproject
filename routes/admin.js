@@ -121,6 +121,7 @@ router.get('/', async (req, res) => {
                             quizSearchId,
                             quizSearchTitle,
                             successMessage: req.query.success || null,
+                            notificationMessage: req.query.notification || null,
                             error: req.query.error || null
                         });
                     });
@@ -334,6 +335,73 @@ router.post('/notice', (req, res) => {
             return res.redirect('/admin?error=공지사항 등록에 실패했습니다.');
         }
         res.redirect('/notice?success=공지사항이 성공적으로 등록되었습니다.');
+    });
+});
+
+// 알림 등록
+router.post('/notification', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.redirect('/');
+    }
+
+    const { targetType, targetUsers, title, message, isImportant } = req.body;
+    const createdBy = req.session.user.id;
+    const priority = isImportant ? 1 : 0; // 1: 중요, 0: 일반
+    const isSystemWide = targetType === 'all' ? 1 : 0;
+
+    // 알림 생성
+    const insertNotificationQuery = `
+        INSERT INTO notifications (title, message, notification_type, priority, is_system_wide, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(insertNotificationQuery, [title, message, 'info', priority, isSystemWide, createdBy], (err, result) => {
+        if (err) {
+            console.error('알림 등록 실패:', err);
+            return res.redirect('/admin?error=알림 등록에 실패했습니다.');
+        }
+
+        const notificationId = result.insertId;
+
+        if (targetType === 'all') {
+            // 모든 유저에게 알림
+            const insertUserNotificationsQuery = `
+                INSERT INTO user_notifications (user_id, notification_id, is_read)
+                SELECT id, ?, 0 FROM user WHERE role != 'admin'
+            `;
+            
+            db.query(insertUserNotificationsQuery, [notificationId], (err) => {
+                if (err) {
+                    console.error('전체 유저 알림 등록 실패:', err);
+                    return res.redirect('/admin?error=전체 유저 알림 등록에 실패했습니다.');
+                }
+                res.redirect('/admin?notification=모든 유저에게 알림이 성공적으로 등록되었습니다.');
+            });
+        } else if (targetType === 'specific' && targetUsers) {
+            // 특정 유저들에게 알림
+            const userIds = Array.isArray(targetUsers) ? targetUsers : [targetUsers];
+            
+            if (userIds.length === 0) {
+                return res.redirect('/admin?error=대상 유저를 선택해주세요.');
+            }
+
+            const insertUserNotificationsQuery = `
+                INSERT INTO user_notifications (user_id, notification_id, is_read)
+                VALUES ?
+            `;
+            
+            const values = userIds.map(userId => [userId, notificationId, 0]);
+            
+            db.query(insertUserNotificationsQuery, [values], (err) => {
+                if (err) {
+                    console.error('특정 유저 알림 등록 실패:', err);
+                    return res.redirect('/admin?error=특정 유저 알림 등록에 실패했습니다.');
+                }
+                res.redirect(`/admin?notification=${userIds.length}명의 유저에게 알림이 성공적으로 등록되었습니다.`);
+            });
+        } else {
+            res.redirect('/admin?error=대상을 선택해주세요.');
+        }
     });
 });
 

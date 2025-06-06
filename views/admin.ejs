@@ -57,6 +57,10 @@
             background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
         }
 
+        .notification-section::before {
+            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+        }
+
         .section-card h2 {
             color: var(--primary-color);
             font-weight: 700;
@@ -206,6 +210,32 @@
 
         .btn-secondary:hover {
             background: #4b5563;
+        }
+
+        /* 알림 등록 관련 스타일 */
+        #targetUsers {
+            min-height: 120px;
+        }
+
+        #targetUsers option {
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+
+        #targetUsers option:checked {
+            background: var(--secondary-color) !important;
+            color: white !important;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .form-text {
+            font-size: 0.875rem;
+            color: #6c757d;
         }
     </style>
 </head>
@@ -363,6 +393,88 @@
                 <button type="submit" class="btn btn-primary">공지 등록</button>
             </form>
         </div>
+
+        <div class="section-card notification-section">
+            <h4>알림 등록</h4>
+            <% if (notificationMessage) { %>
+                <div class="alert alert-success" role="alert">
+                    <%= notificationMessage %>
+                </div>
+            <% } %>
+            <form action="/admin/notification" method="POST" id="notificationForm">
+                <div class="mb-3">
+                    <label class="form-label">대상 선택</label>
+                    <select class="form-select" name="targetType" id="targetType" required>
+                        <option value="">선택하세요</option>
+                        <option value="all">모든 유저에게 보내기</option>
+                        <option value="specific">대상 지정해서 보내기</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="specificUsersDiv" style="display: none;">
+                    <label class="form-label">대상 유저 선택</label>
+                    
+                    <!-- 검색창과 드롭다운 -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">드롭다운에서 선택:</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">유저 검색:</label>
+                                <input type="text" class="form-control" id="userSearchInput" 
+                                       placeholder="이름, ID, 이메일로 검색...">
+                            </div>
+                        </div>
+                        
+                        <select class="form-select mt-2" name="targetUsers[]" id="targetUsers" multiple size="8">
+                            <% users.forEach(user => { %>
+                                <option value="<%= user.id %>" data-username="<%= user.username.toLowerCase() %>" 
+                                        data-email="<%= user.email.toLowerCase() %>" data-id="<%= user.id %>">
+                                    <%= user.username %> (ID: <%= user.id %>, <%= user.email %>)
+                                </option>
+                            <% }) %>
+                        </select>
+                        
+                        <div class="mt-2">
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                Ctrl/Cmd 키를 누르고 클릭하여 여러 유저를 선택할 수 있습니다.
+                            </small>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelection">
+                                <i class="bi bi-x-circle"></i> 선택 초기화
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" id="selectAll">
+                                <i class="bi bi-check-all"></i> 전체 선택
+                            </button>
+                            <span class="badge bg-primary ms-2" id="selectedCount">선택된 유저: 0명</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">제목</label>
+                    <input type="text" class="form-control" name="title" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">내용</label>
+                    <textarea class="form-control" name="message" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isImportant" id="isImportant" value="1">
+                        <label class="form-check-label" for="isImportant">
+                            <i class="bi bi-exclamation-triangle text-warning"></i>
+                            중요 알림으로 표시
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-bell"></i> 알림 등록
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- 퀴즈 상세 정보 모달 -->
@@ -471,6 +583,133 @@
                 }
             });
         });
+
+        // 알림 등록 기능
+        const targetTypeSelect = document.getElementById('targetType');
+        const specificUsersDiv = document.getElementById('specificUsersDiv');
+        const targetUsersSelect = document.getElementById('targetUsers');
+        const userSearchInput = document.getElementById('userSearchInput');
+        const clearSelectionBtn = document.getElementById('clearSelection');
+        const selectAllBtn = document.getElementById('selectAll');
+        const selectedCountBadge = document.getElementById('selectedCount');
+        
+        // 모든 옵션을 저장 (검색 기능을 위해)
+        let allOptions = [];
+        if (targetUsersSelect) {
+            allOptions = Array.from(targetUsersSelect.options).map(option => ({
+                element: option.cloneNode(true),
+                username: option.dataset.username,
+                email: option.dataset.email,
+                id: option.dataset.id,
+                text: option.textContent.toLowerCase()
+            }));
+        }
+
+        // 선택된 유저 수 업데이트
+        function updateSelectedCount() {
+            if (selectedCountBadge && targetUsersSelect) {
+                const count = targetUsersSelect.selectedOptions.length;
+                selectedCountBadge.textContent = `선택된 유저: ${count}명`;
+            }
+        }
+
+        // 유저 검색 기능
+        if (userSearchInput && targetUsersSelect) {
+            userSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                // 드롭다운 옵션 초기화
+                targetUsersSelect.innerHTML = '';
+                
+                // 검색어에 맞는 옵션들 필터링
+                const filteredOptions = allOptions.filter(option => {
+                    return searchTerm === '' || 
+                           option.username.includes(searchTerm) ||
+                           option.email.includes(searchTerm) ||
+                           option.id.toString().includes(searchTerm) ||
+                           option.text.includes(searchTerm);
+                });
+                
+                // 필터링된 옵션들 추가
+                filteredOptions.forEach(option => {
+                    targetUsersSelect.appendChild(option.element.cloneNode(true));
+                });
+                
+                updateSelectedCount();
+            });
+        }
+
+        // 드롭다운 변경 시 카운트 업데이트
+        if (targetUsersSelect) {
+            targetUsersSelect.addEventListener('change', updateSelectedCount);
+        }
+
+        // 선택 초기화 버튼
+        if (clearSelectionBtn && targetUsersSelect) {
+            clearSelectionBtn.addEventListener('click', function() {
+                Array.from(targetUsersSelect.options).forEach(option => {
+                    option.selected = false;
+                });
+                updateSelectedCount();
+            });
+        }
+
+        // 전체 선택 버튼 (현재 보이는 옵션들만)
+        if (selectAllBtn && targetUsersSelect) {
+            selectAllBtn.addEventListener('click', function() {
+                Array.from(targetUsersSelect.options).forEach(option => {
+                    option.selected = true;
+                });
+                updateSelectedCount();
+            });
+        }
+
+        // 대상 타입 변경
+        if (targetTypeSelect) {
+            targetTypeSelect.addEventListener('change', function() {
+                if (this.value === 'specific') {
+                    specificUsersDiv.style.display = 'block';
+                } else {
+                    specificUsersDiv.style.display = 'none';
+                    // 선택된 유저들과 검색어 초기화
+                    if (targetUsersSelect) {
+                        Array.from(targetUsersSelect.options).forEach(option => {
+                            option.selected = false;
+                        });
+                    }
+                    if (userSearchInput) {
+                        userSearchInput.value = '';
+                        // 검색 초기화 시 모든 옵션 복원
+                        if (targetUsersSelect) {
+                            targetUsersSelect.innerHTML = '';
+                            allOptions.forEach(option => {
+                                targetUsersSelect.appendChild(option.element.cloneNode(true));
+                            });
+                        }
+                    }
+                    updateSelectedCount();
+                }
+            });
+        }
+
+        // 폼 제출 시 유효성 검사
+        const notificationForm = document.getElementById('notificationForm');
+        if (notificationForm) {
+            notificationForm.addEventListener('submit', function(e) {
+                const targetType = document.getElementById('targetType').value;
+                const targetUsers = document.getElementById('targetUsers');
+                
+                if (targetType === 'specific') {
+                    const selectedUsers = Array.from(targetUsers.selectedOptions);
+                    
+                    if (selectedUsers.length === 0) {
+                        e.preventDefault();
+                        alert('대상 지정 시 최소 한 명의 유저를 선택해야 합니다.');
+                        return;
+                    }
+                }
+            });
+        }
     });
     </script>
 </body>

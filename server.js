@@ -362,6 +362,217 @@ app.get('/api/ranking', async (req, res) => {
     }
 });
 
+// 알림 관련 API
+// 사용자의 알림 목록 조회
+app.get('/api/notifications', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    const query = `
+        SELECT 
+            n.id,
+            n.title,
+            n.message,
+            n.priority,
+            n.created_at,
+            un.is_read,
+            un.read_at
+        FROM notifications n
+        JOIN user_notifications un ON n.id = un.notification_id
+        WHERE un.user_id = ?
+        ORDER BY n.created_at DESC
+        LIMIT 50
+    `;
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('알림 조회 실패:', err);
+            return res.status(500).json({ error: '알림을 불러오는 중 오류가 발생했습니다.' });
+        }
+
+        // 시간 포맷팅
+        const notifications = results.map(notification => {
+            const now = new Date();
+            const createdAt = new Date(notification.created_at);
+            const diffInMinutes = Math.floor((now - createdAt) / (1000 * 60));
+            
+            let timeAgo;
+            if (diffInMinutes < 1) {
+                timeAgo = '방금 전';
+            } else if (diffInMinutes < 60) {
+                timeAgo = `${diffInMinutes}분 전`;
+            } else if (diffInMinutes < 1440) {
+                timeAgo = `${Math.floor(diffInMinutes / 60)}시간 전`;
+            } else {
+                timeAgo = `${Math.floor(diffInMinutes / 1440)}일 전`;
+            }
+
+            return {
+                id: notification.id,
+                title: notification.title,
+                message: notification.message,
+                priority: notification.priority,
+                time: timeAgo,
+                read: notification.is_read === 1
+            };
+        });
+
+        res.json(notifications);
+    });
+});
+
+// 알림 읽음 처리
+app.post('/api/notifications/:id/read', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    const notificationId = req.params.id;
+
+    const query = `
+        UPDATE user_notifications 
+        SET is_read = 1, read_at = NOW() 
+        WHERE user_id = ? AND notification_id = ?
+    `;
+
+    db.query(query, [userId, notificationId], (err, results) => {
+        if (err) {
+            console.error('알림 읽음 처리 실패:', err);
+            return res.status(500).json({ error: '알림 처리 중 오류가 발생했습니다.' });
+        }
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ error: '알림을 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true });
+    });
+});
+
+// 모든 알림 읽음 처리 (중요 알림 제외)
+app.post('/api/notifications/read-all', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    const query = `
+        UPDATE user_notifications un
+        JOIN notifications n ON un.notification_id = n.id
+        SET un.is_read = 1, un.read_at = NOW() 
+        WHERE un.user_id = ? AND un.is_read = 0 AND n.priority = 0
+    `;
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('전체 알림 읽음 처리 실패:', err);
+            return res.status(500).json({ error: '알림 처리 중 오류가 발생했습니다.' });
+        }
+
+        res.json({ success: true, updatedCount: results.affectedRows });
+    });
+});
+
+// 읽은 알림 일괄 삭제 (특정 라우트를 먼저 정의)
+app.delete('/api/notifications/read', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    console.log(`[읽은 알림 삭제] 사용자 ID: ${userId}`);
+    
+    const query = `
+        DELETE FROM user_notifications 
+        WHERE user_id = ? AND is_read = 1
+    `;
+    
+    console.log('[읽은 알림 삭제] 실행할 쿼리:', query);
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('[읽은 알림 삭제] 데이터베이스 오류:', err);
+            return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
+        }
+
+        console.log(`[읽은 알림 삭제] 영향받은 행 수: ${results.affectedRows}`);
+        res.json({ success: true, deletedCount: results.affectedRows });
+    });
+});
+
+// 선택된 알림들 삭제
+app.delete('/api/notifications', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    const { notificationIds } = req.body;
+    
+    console.log(`[선택 삭제] 사용자 ID: ${userId}, 알림 IDs:`, notificationIds);
+
+    if (!notificationIds || !Array.isArray(notificationIds) || notificationIds.length === 0) {
+        console.log('[선택 삭제] 잘못된 요청 데이터');
+        return res.status(400).json({ error: '삭제할 알림을 선택해주세요.' });
+    }
+
+    const placeholders = notificationIds.map(() => '?').join(',');
+    const query = `
+        DELETE FROM user_notifications 
+        WHERE user_id = ? AND notification_id IN (${placeholders})
+    `;
+    
+    console.log('[선택 삭제] 실행할 쿼리:', query);
+    console.log('[선택 삭제] 쿼리 파라미터:', [userId, ...notificationIds]);
+
+    db.query(query, [userId, ...notificationIds], (err, results) => {
+        if (err) {
+            console.error('[선택 삭제] 데이터베이스 오류:', err);
+            return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
+        }
+
+        console.log(`[선택 삭제] 영향받은 행 수: ${results.affectedRows}`);
+        res.json({ success: true, deletedCount: results.affectedRows });
+    });
+});
+
+// 특정 알림 삭제 (마지막에 정의하여 다른 라우트와 충돌 방지)
+app.delete('/api/notifications/:id', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: '로그인이 필요합니다.' });
+    }
+
+    const userId = req.session.user.id;
+    const notificationId = req.params.id;
+    
+    console.log(`[개별 삭제] 사용자 ID: ${userId}, 알림 ID: ${notificationId}`);
+
+    const query = `
+        DELETE FROM user_notifications 
+        WHERE user_id = ? AND notification_id = ?
+    `;
+
+    db.query(query, [userId, notificationId], (err, results) => {
+        if (err) {
+            console.error('[개별 삭제] 데이터베이스 오류:', err);
+            return res.status(500).json({ error: '알림 삭제 중 오류가 발생했습니다.' });
+        }
+
+        console.log(`[개별 삭제] 영향받은 행 수: ${results.affectedRows}`);
+        
+        if (results.affectedRows === 0) {
+            console.log('[개별 삭제] 삭제할 알림을 찾을 수 없음');
+            return res.status(404).json({ error: '알림을 찾을 수 없습니다.' });
+        }
+
+        console.log('[개별 삭제] 성공적으로 삭제됨');
+        res.json({ success: true, deletedCount: results.affectedRows });
+    });
+});
+
 // 회원가입 페이지 렌더링
 app.get('/signup', (req, res) => {
     res.render('signup', { error: null });
