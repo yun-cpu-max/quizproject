@@ -253,7 +253,7 @@
 </head>
 <body>
     <!-- 토스트 알림 컨테이너 -->
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div class="toast-container position-fixed end-0 p-3" style="z-index: 1100; top: 80px;">
     </div>
     <!-- 공통 네비게이션 바 -->
     <%- include('partials/navbar') %>
@@ -290,12 +290,9 @@
                                             <i class="bi bi-check-lg"></i> 승인
                                         </button>
                                     </form>
-                                    <form action="/admin/reject" method="POST" style="display:inline;">
-                                        <input type="hidden" name="idx" value="<%= quiz.id %>">
-                                        <button class="btn btn-danger btn-sm">
-                                            <i class="bi bi-x-lg"></i> 거절
-                                        </button>
-                                    </form>
+                                    <button class="btn btn-danger btn-sm reject-btn" data-quiz-id="<%= quiz.id %>" data-quiz-title="<%= quiz.title %>" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                        <i class="bi bi-x-lg"></i> 거절
+                                    </button>
                                 </td>
                             </tr>
                             <% }) %>
@@ -501,6 +498,36 @@
         </div>
     </div>
 
+    <!-- 퀴즈 거절 사유 입력 모달 -->
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectModalLabel">퀴즈 거절</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="rejectForm" action="/admin/reject" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" id="rejectQuizId" name="idx" value="">
+                        <div class="mb-3">
+                            <label for="rejectReason" class="form-label">거절 사유</label>
+                            <textarea class="form-control" id="rejectReason" name="rejectReason" rows="4" 
+                                    placeholder="퀴즈 거절 사유를 입력해주세요. 이 내용이 퀴즈 작성자에게 알림으로 전송됩니다." required></textarea>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-info-circle"></i>
+                            입력한 거절 사유는 퀴즈 작성자에게 알림으로 전송됩니다.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="submit" class="btn btn-danger">거절하기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 퀴즈 상세 정보 모달 -->
     <div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -567,13 +594,13 @@
         
         // 토스트 HTML 생성
         const toastHtml = `
-            <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 300px; max-width: 400px;">
                 <div class="toast-header">
                     <i class="bi ${currentConfig.icon} me-2"></i>
                     <strong class="me-auto">${currentConfig.title}</strong>
                     <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-                <div class="toast-body">
+                <div class="toast-body" style="word-wrap: break-word; white-space: pre-line;">
                     ${message}
                 </div>
             </div>
@@ -598,9 +625,29 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // URL 파라미터에서 성공/오류 메시지 확인하여 토스트 표시
+        const urlParams = new URLSearchParams(window.location.search);
+        const successMessage = urlParams.get('success');
+        const errorMessage = urlParams.get('error');
+        
+        if (successMessage) {
+            showToast(successMessage, 'success');
+            // URL에서 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (errorMessage) {
+            showToast(errorMessage, 'error');
+            // URL에서 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
         const quizModal = document.getElementById('quizModal');
+        const rejectModal = document.getElementById('rejectModal');
         const pendingQuizTitleLinks = document.querySelectorAll('.quiz-title-link');
         const viewQuizLinks = document.querySelectorAll('.view-quiz-link'); // 모든 퀴즈 정보 링크
+        const rejectButtons = document.querySelectorAll('.reject-btn');
+        
+        console.log('[초기화] 거절 버튼 수:', rejectButtons.length);
         
         // 승인 대기 퀴즈 링크 클릭 이벤트 (기존 로직 유지)
         pendingQuizTitleLinks.forEach(link => {
@@ -752,21 +799,70 @@
             });
         });
 
-         // 모달이 닫힐 때 내용 초기화 (선택 사항)
-         quizModal.addEventListener('hidden.bs.modal', function () {
-             document.getElementById('modalQuizTitle').textContent = '';
-             document.getElementById('modalQuizCategory').textContent = '';
-             document.getElementById('modalQuizDescription').textContent = '';
-             document.getElementById('modalQuizQuestions').innerHTML = '';
+                   // 모달이 닫힐 때 내용 초기화 (선택 사항)
+          quizModal.addEventListener('hidden.bs.modal', function () {
+              document.getElementById('modalQuizTitle').textContent = '';
+              document.getElementById('modalQuizCategory').textContent = '';
+              document.getElementById('modalQuizDescription').textContent = '';
+              document.getElementById('modalQuizQuestions').innerHTML = '';
 
-             // 모달 배경 및 body 클래스 강제 제거 (문제 해결 시도)
-             const backdrops = document.getElementsByClassName('modal-backdrop');
-             while(backdrops.length > 0){
-                 backdrops[0].parentNode.removeChild(backdrops[0]);
-             }
-             document.body.classList.remove('modal-open');
-             document.body.style.overflow = ''; // 스크롤 복원
-         });
+              // 모달 배경 및 body 클래스 강제 제거 (문제 해결 시도)
+              const backdrops = document.getElementsByClassName('modal-backdrop');
+              while(backdrops.length > 0){
+                  backdrops[0].parentNode.removeChild(backdrops[0]);
+              }
+              document.body.classList.remove('modal-open');
+              document.body.style.overflow = ''; // 스크롤 복원
+          });
+
+          // 거절 버튼 클릭 이벤트
+          rejectButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  const quizId = this.dataset.quizId;
+                  const quizTitle = this.dataset.quizTitle;
+                  
+                  console.log('[거절 버튼] 클릭됨 - 퀴즈 ID:', quizId, '제목:', quizTitle);
+                  
+                  // 모달에 퀴즈 ID 설정
+                  document.getElementById('rejectQuizId').value = quizId;
+                  
+                  // 모달 제목에 퀴즈 제목 포함
+                  document.getElementById('rejectModalLabel').textContent = `퀴즈 거절: ${quizTitle}`;
+                  
+                  // 거절 사유 초기화
+                  document.getElementById('rejectReason').value = '';
+              });
+          });
+
+          // 거절 폼 제출 이벤트
+          const rejectForm = document.getElementById('rejectForm');
+          if (rejectForm) {
+              rejectForm.addEventListener('submit', function(e) {
+                  const quizId = document.getElementById('rejectQuizId').value;
+                  const rejectReason = document.getElementById('rejectReason').value;
+                  
+                  console.log('[거절 폼] 제출됨 - 퀴즈 ID:', quizId, '거절 사유:', rejectReason);
+                  
+                  if (!rejectReason.trim()) {
+                      e.preventDefault();
+                      showToast('거절 사유를 입력해주세요.', 'warning');
+                      return false;
+                  }
+                  
+                  // 제출 확인
+                  if (!confirm('정말로 이 퀴즈를 거절하시겠습니까?')) {
+                      e.preventDefault();
+                      return false;
+                  }
+              });
+          }
+
+          // 거절 모달이 닫힐 때 내용 초기화
+          rejectModal.addEventListener('hidden.bs.modal', function () {
+              document.getElementById('rejectQuizId').value = '';
+              document.getElementById('rejectModalLabel').textContent = '퀴즈 거절';
+              document.getElementById('rejectReason').value = '';
+          });
 
         // 알림 등록 기능
         const targetTypeSelect = document.getElementById('targetType');

@@ -74,8 +74,27 @@
 </div>
 </nav>
 
+<!-- 확인 다이얼로그 모달 -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">확인</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmModalMessage">정말로 삭제하시겠습니까?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="confirmModalConfirm">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 토스트 알림 컨테이너 -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+<div class="toast-container position-fixed end-0 p-3" style="z-index: 1100; top: 80px;">
 </div>
 
 <!-- 개별 알림 상세보기 모달 -->
@@ -127,6 +146,29 @@
 
 <!-- 알림 기능을 위한 스크립트 -->
 <script>
+// 확인 다이얼로그 함수
+function showConfirmModal(message, onConfirm, confirmText = '삭제', confirmClass = 'btn-danger') {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const messageElement = document.getElementById('confirmModalMessage');
+    const confirmButton = document.getElementById('confirmModalConfirm');
+    
+    messageElement.textContent = message;
+    confirmButton.textContent = confirmText;
+    confirmButton.className = `btn ${confirmClass}`;
+    
+    // 기존 이벤트 리스너 제거
+    const newConfirmButton = confirmButton.cloneNode(true);
+    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+    
+    // 새 이벤트 리스너 추가
+    newConfirmButton.addEventListener('click', function() {
+        modal.hide();
+        onConfirm();
+    });
+    
+    modal.show();
+}
+
 // 토스트 알림 함수
 function showToast(message, type = 'info', duration = 3000) {
     const toastContainer = document.querySelector('.toast-container');
@@ -160,13 +202,13 @@ function showToast(message, type = 'info', duration = 3000) {
     
     // 토스트 HTML 생성
     const toastHtml = `
-        <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 300px; max-width: 400px;">
             <div class="toast-header">
                 <i class="bi ${currentConfig.icon} me-2"></i>
                 <strong class="me-auto">${currentConfig.title}</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div class="toast-body">
+            <div class="toast-body" style="word-wrap: break-word; white-space: pre-line;">
                 ${message}
             </div>
         </div>
@@ -232,7 +274,12 @@ function updateNotificationUI(notifications) {
             <li>
                 <div class="dropdown-item notification-item ${!notification.read ? 'unread' : ''}" data-id="${notification.id}">
                     <input type="checkbox" class="form-check-input notification-checkbox" data-notification-id="${notification.id}">
-                    <div class="notification-content" onclick="openNotificationDetail(${notification.id}, '${escapeHtml(notification.title)}', '${escapeHtml(notification.message)}', '${notification.time}', ${notification.priority}, ${notification.read})">
+                    <div class="notification-content" data-notification-id="${notification.id}" 
+                         data-title="${escapeHtml(notification.title)}"
+                         data-message="${escapeHtml(notification.message)}"
+                         data-time="${notification.time}"
+                         data-priority="${notification.priority}"
+                         data-read="${notification.read}">
                         <strong class="${notification.priority === 1 ? 'text-warning' : ''}">${notification.title}</strong>
                         <p>${notification.message}</p>
                         <div class="notification-actions">
@@ -273,12 +320,26 @@ function updateNotificationUI(notifications) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML.replace(/'/g, '\\\'');
+    return div.innerHTML
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '&#10;')
+        .replace(/\r/g, '&#13;');
+}
+
+function unescapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    return div.textContent || div.innerText || '';
 }
 
 function openNotificationDetail(id, title, message, time, priority, read) {
+    console.log('openNotificationDetail 호출됨:', { id, title, message, time, priority, read });
+    
     const modal = new bootstrap.Modal(document.getElementById('notificationDetailModal'));
     const modalHeader = document.getElementById('notificationModalHeader');
     const modalTitle = document.getElementById('modalNotificationTitle');
@@ -290,9 +351,13 @@ function openNotificationDetail(id, title, message, time, priority, read) {
     const modalMarkAsRead = document.getElementById('modalMarkAsRead');
     const modalDeleteBtn = document.getElementById('modalDeleteNotification');
     
+    // HTML 엔티티 디코딩
+    const decodedTitle = unescapeHtml(title);
+    const decodedMessage = unescapeHtml(message);
+    
     modalTitle.textContent = '알림 상세';
-    modalTitleText.textContent = title;
-    modalMessage.textContent = message;
+    modalTitleText.textContent = decodedTitle;
+    modalMessage.textContent = decodedMessage;
     modalPriority.innerHTML = priority === 1 ? 
         '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i>중요</span>' : 
         '<span class="badge bg-secondary">일반</span>';
@@ -351,42 +416,43 @@ function openNotificationDetail(id, title, message, time, priority, read) {
 
 async function deleteNotification(id) {
     console.log('삭제할 알림 ID:', id);
-    if (!confirm('이 알림을 삭제하시겠습니까?')) return;
     
-    // 즉시 UI에서 해당 알림 제거 (낙관적 업데이트)
-    const notificationElement = document.querySelector(`[data-id="${id}"]`);
-    if (notificationElement) {
-        notificationElement.parentElement.remove();
-        updateNotificationBadge();
-    }
-    
-    try {
-        console.log('DELETE 요청 시작:', `/api/notifications/${id}`);
-        const response = await fetch(`/api/notifications/${id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
+    showConfirmModal('이 알림을 삭제하시겠습니까?', async function() {
+        // 즉시 UI에서 해당 알림 제거 (낙관적 업데이트)
+        const notificationElement = document.querySelector(`[data-id="${id}"]`);
+        if (notificationElement) {
+            notificationElement.parentElement.remove();
+            updateNotificationBadge();
+        }
         
-        console.log('서버 응답 상태:', response.status);
-        
-        if (response.ok) {
-            const result = await response.json();
-            console.log('알림 삭제 성공:', result);
-            // 서버에서 확인 후 전체 목록 새로고침
-            await loadNotifications();
-        } else {
-            const error = await response.json();
-            console.error('삭제 실패 응답:', error);
-            showToast('알림 삭제에 실패했습니다: ' + (error.error || '알 수 없는 오류'), 'error');
-            // 실패 시 전체 목록 새로고침하여 원상복구
+        try {
+            console.log('DELETE 요청 시작:', `/api/notifications/${id}`);
+            const response = await fetch(`/api/notifications/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            console.log('서버 응답 상태:', response.status);
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('알림 삭제 성공:', result);
+                // 서버에서 확인 후 전체 목록 새로고침
+                await loadNotifications();
+            } else {
+                const error = await response.json();
+                console.error('삭제 실패 응답:', error);
+                showToast('알림 삭제에 실패했습니다: ' + (error.error || '알 수 없는 오류'), 'error');
+                // 실패 시 전체 목록 새로고침하여 원상복구
+                await loadNotifications();
+            }
+        } catch (error) {
+            console.error('알림 삭제 오류:', error);
+            showToast('알림 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+            // 오류 시 전체 목록 새로고침하여 원상복구
             await loadNotifications();
         }
-    } catch (error) {
-        console.error('알림 삭제 오류:', error);
-        showToast('알림 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
-        // 오류 시 전체 목록 새로고침하여 원상복구
-        await loadNotifications();
-    }
+    });
 }
 
 async function markAsRead(notificationId) {
@@ -415,7 +481,7 @@ async function deleteSelectedNotifications() {
         return;
     }
     
-    if (!confirm(`선택된 ${selectedIds.length}개의 알림을 삭제하시겠습니까?`)) return;
+    showConfirmModal(`선택된 ${selectedIds.length}개의 알림을 삭제하시겠습니까?`, async function() {
     
     // 즉시 UI에서 선택된 알림들 제거 (낙관적 업데이트)
     selectedIds.forEach(id => {
@@ -456,11 +522,12 @@ async function deleteSelectedNotifications() {
         // 오류 시 전체 목록 새로고침하여 원상복구
         await loadNotifications();
     }
+    });
 }
 
 async function deleteReadNotifications() {
     console.log('읽은 알림 삭제 요청');
-    if (!confirm('읽은 알림을 모두 삭제하시겠습니까?')) return;
+    showConfirmModal('읽은 알림을 모두 삭제하시겠습니까?', async function() {
     
     // 즉시 UI에서 읽은 알림들 제거 (낙관적 업데이트)
     const readNotifications = document.querySelectorAll('.notification-item:not(.unread)');
@@ -501,6 +568,7 @@ async function deleteReadNotifications() {
         // 오류 시 전체 목록 새로고침하여 원상복구
         await loadNotifications();
     }
+    });
 }
 
 function getSelectedNotificationIds() {
@@ -582,6 +650,20 @@ async function markSelectedAsRead() {
 document.addEventListener('DOMContentLoaded', function() {
     // 이벤트 리스너들
     document.addEventListener('click', function(e) {
+        // 알림 내용 클릭 이벤트
+        if (e.target.closest('.notification-content')) {
+            const notificationContent = e.target.closest('.notification-content');
+            const id = parseInt(notificationContent.dataset.notificationId);
+            const title = notificationContent.dataset.title;
+            const message = notificationContent.dataset.message;
+            const time = notificationContent.dataset.time;
+            const priority = parseInt(notificationContent.dataset.priority);
+            const read = notificationContent.dataset.read === 'true';
+            
+            console.log('알림 내용 클릭됨:', { id, title, message, time, priority, read });
+            openNotificationDetail(id, title, message, time, priority, read);
+            return;
+        }
         // 개별 알림 삭제 버튼
         if (e.target.classList.contains('notification-delete-btn') || e.target.closest('.notification-delete-btn')) {
             const deleteBtn = e.target.classList.contains('notification-delete-btn') ? e.target : e.target.closest('.notification-delete-btn');
