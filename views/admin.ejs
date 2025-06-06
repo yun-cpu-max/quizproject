@@ -57,6 +57,10 @@
             background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
         }
 
+        .notification-section::before {
+            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+        }
+
         .section-card h2 {
             color: var(--primary-color);
             font-weight: 700;
@@ -219,51 +223,40 @@
         .btn-secondary:hover {
             background: #4b5563;
         }
+
+        /* 알림 등록 관련 스타일 */
+        #targetUsers {
+            min-height: 120px;
+        }
+
+        #targetUsers option {
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+
+        #targetUsers option:checked {
+            background: var(--secondary-color) !important;
+            color: white !important;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .form-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
-    <!-- 네비게이션 바 -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" class="logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
-                    </li>
-                    <% if (user) { %>
-                        <li class="nav-item">
-                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
-                        </li>
-                    <% } %>
-                </ul>
-                <div class="d-flex">
-                    <% if (user) { %>
-                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
-                        <% if (user.role === 'admin') { %>
-                        <a href="/admin" class="btn btn-warning me-2 active"><i class="bi bi-gear"></i> 관리자</a>
-                        <% } %>
-                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
-                    <% } else { %>
-                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
-                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- 토스트 알림 컨테이너 -->
+    <div class="toast-container position-fixed end-0 p-3" style="z-index: 1100; top: 80px;">
+    </div>
+    <!-- 공통 네비게이션 바 -->
+    <%- include('partials/navbar') %>
 
     <div class="container">
         <div class="section-card pending-quiz-section">
@@ -297,12 +290,9 @@
                                             <i class="bi bi-check-lg"></i> 승인
                                         </button>
                                     </form>
-                                    <form action="/admin/reject" method="POST" style="display:inline;">
-                                        <input type="hidden" name="idx" value="<%= quiz.id %>">
-                                        <button class="btn btn-danger btn-sm">
-                                            <i class="bi bi-x-lg"></i> 거절
-                                        </button>
-                                    </form>
+                                    <button class="btn btn-danger btn-sm reject-btn" data-quiz-id="<%= quiz.id %>" data-quiz-title="<%= quiz.title %>" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                        <i class="bi bi-x-lg"></i> 거절
+                                    </button>
                                 </td>
                             </tr>
                             <% }) %>
@@ -424,6 +414,118 @@
                 <button type="submit" class="btn btn-primary">공지 등록</button>
             </form>
         </div>
+
+        <div class="section-card notification-section">
+            <h4>알림 등록</h4>
+            <% if (notificationMessage) { %>
+                <div class="alert alert-success" role="alert">
+                    <%= notificationMessage %>
+                </div>
+            <% } %>
+            <form action="/admin/notification" method="POST" id="notificationForm">
+                <div class="mb-3">
+                    <label class="form-label">대상 선택</label>
+                    <select class="form-select" name="targetType" id="targetType" required>
+                        <option value="">선택하세요</option>
+                        <option value="all">모든 유저에게 보내기</option>
+                        <option value="specific">대상 지정해서 보내기</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="specificUsersDiv" style="display: none;">
+                    <label class="form-label">대상 유저 선택</label>
+                    
+                    <!-- 검색창과 드롭다운 -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">드롭다운에서 선택:</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">유저 검색:</label>
+                                <input type="text" class="form-control" id="userSearchInput" 
+                                       placeholder="이름, ID, 이메일로 검색...">
+                            </div>
+                        </div>
+                        
+                        <select class="form-select mt-2" name="targetUsers[]" id="targetUsers" multiple size="8">
+                            <% users.forEach(user => { %>
+                                <option value="<%= user.id %>" data-username="<%= user.username.toLowerCase() %>" 
+                                        data-email="<%= user.email.toLowerCase() %>" data-id="<%= user.id %>">
+                                    <%= user.username %> (ID: <%= user.id %>, <%= user.email %>)
+                                </option>
+                            <% }) %>
+                        </select>
+                        
+                        <div class="mt-2">
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                Ctrl/Cmd 키를 누르고 클릭하여 여러 유저를 선택할 수 있습니다.
+                            </small>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelection">
+                                <i class="bi bi-x-circle"></i> 선택 초기화
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" id="selectAll">
+                                <i class="bi bi-check-all"></i> 전체 선택
+                            </button>
+                            <span class="badge bg-primary ms-2" id="selectedCount">선택된 유저: 0명</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">제목</label>
+                    <input type="text" class="form-control" name="title" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">내용</label>
+                    <textarea class="form-control" name="message" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isImportant" id="isImportant" value="1">
+                        <label class="form-check-label" for="isImportant">
+                            <i class="bi bi-exclamation-triangle text-warning"></i>
+                            중요 알림으로 표시
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-bell"></i> 알림 등록
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 퀴즈 거절 사유 입력 모달 -->
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectModalLabel">퀴즈 거절</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="rejectForm" action="/admin/reject" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" id="rejectQuizId" name="idx" value="">
+                        <div class="mb-3">
+                            <label for="rejectReason" class="form-label">거절 사유</label>
+                            <textarea class="form-control" id="rejectReason" name="rejectReason" rows="4" 
+                                    placeholder="퀴즈 거절 사유를 입력해주세요. 이 내용이 퀴즈 작성자에게 알림으로 전송됩니다." required></textarea>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-info-circle"></i>
+                            입력한 거절 사유는 퀴즈 작성자에게 알림으로 전송됩니다.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="submit" class="btn btn-danger">거절하기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- 퀴즈 상세 정보 모달 -->
@@ -459,10 +561,93 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // 토스트 알림 함수
+    function showToast(message, type = 'info', duration = 3000) {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast_' + Date.now();
+        
+        // 토스트 타입별 색상 및 아이콘 설정
+        const config = {
+            success: {
+                bgClass: 'text-bg-success',
+                icon: 'bi-check-circle-fill',
+                title: '성공'
+            },
+            error: {
+                bgClass: 'text-bg-danger', 
+                icon: 'bi-exclamation-triangle-fill',
+                title: '오류'
+            },
+            warning: {
+                bgClass: 'text-bg-warning',
+                icon: 'bi-exclamation-triangle-fill', 
+                title: '경고'
+            },
+            info: {
+                bgClass: 'text-bg-info',
+                icon: 'bi-info-circle-fill',
+                title: '알림'
+            }
+        };
+        
+        const currentConfig = config[type] || config.info;
+        
+        // 토스트 HTML 생성
+        const toastHtml = `
+            <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 300px; max-width: 400px;">
+                <div class="toast-header">
+                    <i class="bi ${currentConfig.icon} me-2"></i>
+                    <strong class="me-auto">${currentConfig.title}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body" style="word-wrap: break-word; white-space: pre-line;">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        // 토스트를 컨테이너에 추가
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        // 토스트 인스턴스 생성 및 표시
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: duration
+        });
+        
+        // 토스트가 숨겨진 후 DOM에서 제거
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+        
+        toast.show();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // URL 파라미터에서 성공/오류 메시지 확인하여 토스트 표시
+        const urlParams = new URLSearchParams(window.location.search);
+        const successMessage = urlParams.get('success');
+        const errorMessage = urlParams.get('error');
+        
+        if (successMessage) {
+            showToast(successMessage, 'success');
+            // URL에서 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (errorMessage) {
+            showToast(errorMessage, 'error');
+            // URL에서 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
         const quizModal = document.getElementById('quizModal');
+        const rejectModal = document.getElementById('rejectModal');
         const pendingQuizTitleLinks = document.querySelectorAll('.quiz-title-link');
         const viewQuizLinks = document.querySelectorAll('.view-quiz-link'); // 모든 퀴즈 정보 링크
+        const rejectButtons = document.querySelectorAll('.reject-btn');
+        
+        console.log('[초기화] 거절 버튼 수:', rejectButtons.length);
         
         // 승인 대기 퀴즈 링크 클릭 이벤트 (기존 로직 유지)
         pendingQuizTitleLinks.forEach(link => {
@@ -614,21 +799,197 @@
             });
         });
 
-         // 모달이 닫힐 때 내용 초기화 (선택 사항)
-         quizModal.addEventListener('hidden.bs.modal', function () {
-             document.getElementById('modalQuizTitle').textContent = '';
-             document.getElementById('modalQuizCategory').textContent = '';
-             document.getElementById('modalQuizDescription').textContent = '';
-             document.getElementById('modalQuizQuestions').innerHTML = '';
+                   // 모달이 닫힐 때 내용 초기화 (선택 사항)
+          quizModal.addEventListener('hidden.bs.modal', function () {
+              document.getElementById('modalQuizTitle').textContent = '';
+              document.getElementById('modalQuizCategory').textContent = '';
+              document.getElementById('modalQuizDescription').textContent = '';
+              document.getElementById('modalQuizQuestions').innerHTML = '';
 
-             // 모달 배경 및 body 클래스 강제 제거 (문제 해결 시도)
-             const backdrops = document.getElementsByClassName('modal-backdrop');
-             while(backdrops.length > 0){
-                 backdrops[0].parentNode.removeChild(backdrops[0]);
-             }
-             document.body.classList.remove('modal-open');
-             document.body.style.overflow = ''; // 스크롤 복원
-         });
+              // 모달 배경 및 body 클래스 강제 제거 (문제 해결 시도)
+              const backdrops = document.getElementsByClassName('modal-backdrop');
+              while(backdrops.length > 0){
+                  backdrops[0].parentNode.removeChild(backdrops[0]);
+              }
+              document.body.classList.remove('modal-open');
+              document.body.style.overflow = ''; // 스크롤 복원
+          });
+
+          // 거절 버튼 클릭 이벤트
+          rejectButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  const quizId = this.dataset.quizId;
+                  const quizTitle = this.dataset.quizTitle;
+                  
+                  console.log('[거절 버튼] 클릭됨 - 퀴즈 ID:', quizId, '제목:', quizTitle);
+                  
+                  // 모달에 퀴즈 ID 설정
+                  document.getElementById('rejectQuizId').value = quizId;
+                  
+                  // 모달 제목에 퀴즈 제목 포함
+                  document.getElementById('rejectModalLabel').textContent = `퀴즈 거절: ${quizTitle}`;
+                  
+                  // 거절 사유 초기화
+                  document.getElementById('rejectReason').value = '';
+              });
+          });
+
+          // 거절 폼 제출 이벤트
+          const rejectForm = document.getElementById('rejectForm');
+          if (rejectForm) {
+              rejectForm.addEventListener('submit', function(e) {
+                  const quizId = document.getElementById('rejectQuizId').value;
+                  const rejectReason = document.getElementById('rejectReason').value;
+                  
+                  console.log('[거절 폼] 제출됨 - 퀴즈 ID:', quizId, '거절 사유:', rejectReason);
+                  
+                  if (!rejectReason.trim()) {
+                      e.preventDefault();
+                      showToast('거절 사유를 입력해주세요.', 'warning');
+                      return false;
+                  }
+                  
+                  // 제출 확인
+                  if (!confirm('정말로 이 퀴즈를 거절하시겠습니까?')) {
+                      e.preventDefault();
+                      return false;
+                  }
+              });
+          }
+
+          // 거절 모달이 닫힐 때 내용 초기화
+          rejectModal.addEventListener('hidden.bs.modal', function () {
+              document.getElementById('rejectQuizId').value = '';
+              document.getElementById('rejectModalLabel').textContent = '퀴즈 거절';
+              document.getElementById('rejectReason').value = '';
+          });
+
+        // 알림 등록 기능
+        const targetTypeSelect = document.getElementById('targetType');
+        const specificUsersDiv = document.getElementById('specificUsersDiv');
+        const targetUsersSelect = document.getElementById('targetUsers');
+        const userSearchInput = document.getElementById('userSearchInput');
+        const clearSelectionBtn = document.getElementById('clearSelection');
+        const selectAllBtn = document.getElementById('selectAll');
+        const selectedCountBadge = document.getElementById('selectedCount');
+        
+        // 모든 옵션을 저장 (검색 기능을 위해)
+        let allOptions = [];
+        if (targetUsersSelect) {
+            allOptions = Array.from(targetUsersSelect.options).map(option => ({
+                element: option.cloneNode(true),
+                username: option.dataset.username,
+                email: option.dataset.email,
+                id: option.dataset.id,
+                text: option.textContent.toLowerCase()
+            }));
+        }
+
+        // 선택된 유저 수 업데이트
+        function updateSelectedCount() {
+            if (selectedCountBadge && targetUsersSelect) {
+                const count = targetUsersSelect.selectedOptions.length;
+                selectedCountBadge.textContent = `선택된 유저: ${count}명`;
+            }
+        }
+
+        // 유저 검색 기능
+        if (userSearchInput && targetUsersSelect) {
+            userSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                // 드롭다운 옵션 초기화
+                targetUsersSelect.innerHTML = '';
+                
+                // 검색어에 맞는 옵션들 필터링
+                const filteredOptions = allOptions.filter(option => {
+                    return searchTerm === '' || 
+                           option.username.includes(searchTerm) ||
+                           option.email.includes(searchTerm) ||
+                           option.id.toString().includes(searchTerm) ||
+                           option.text.includes(searchTerm);
+                });
+                
+                // 필터링된 옵션들 추가
+                filteredOptions.forEach(option => {
+                    targetUsersSelect.appendChild(option.element.cloneNode(true));
+                });
+                
+                updateSelectedCount();
+            });
+        }
+
+        // 드롭다운 변경 시 카운트 업데이트
+        if (targetUsersSelect) {
+            targetUsersSelect.addEventListener('change', updateSelectedCount);
+        }
+
+        // 선택 초기화 버튼
+        if (clearSelectionBtn && targetUsersSelect) {
+            clearSelectionBtn.addEventListener('click', function() {
+                Array.from(targetUsersSelect.options).forEach(option => {
+                    option.selected = false;
+                });
+                updateSelectedCount();
+            });
+        }
+
+        // 전체 선택 버튼 (현재 보이는 옵션들만)
+        if (selectAllBtn && targetUsersSelect) {
+            selectAllBtn.addEventListener('click', function() {
+                Array.from(targetUsersSelect.options).forEach(option => {
+                    option.selected = true;
+                });
+                updateSelectedCount();
+            });
+        }
+
+        // 대상 타입 변경
+        if (targetTypeSelect) {
+            targetTypeSelect.addEventListener('change', function() {
+                if (this.value === 'specific') {
+                    specificUsersDiv.style.display = 'block';
+                } else {
+                    specificUsersDiv.style.display = 'none';
+                    // 선택된 유저들과 검색어 초기화
+                    if (targetUsersSelect) {
+                        Array.from(targetUsersSelect.options).forEach(option => {
+                            option.selected = false;
+                        });
+                    }
+                    if (userSearchInput) {
+                        userSearchInput.value = '';
+                        // 검색 초기화 시 모든 옵션 복원
+                        if (targetUsersSelect) {
+                            targetUsersSelect.innerHTML = '';
+                            allOptions.forEach(option => {
+                                targetUsersSelect.appendChild(option.element.cloneNode(true));
+                            });
+                        }
+                    }
+                    updateSelectedCount();
+                }
+            });
+        }
+
+        // 폼 제출 시 유효성 검사
+        const notificationForm = document.getElementById('notificationForm');
+        if (notificationForm) {
+            notificationForm.addEventListener('submit', function(e) {
+                const targetType = document.getElementById('targetType').value;
+                const targetUsers = document.getElementById('targetUsers');
+                
+                if (targetType === 'specific') {
+                    const selectedUsers = Array.from(targetUsers.selectedOptions);
+                    
+                    if (selectedUsers.length === 0) {
+                        e.preventDefault();
+                        showToast('대상 지정 시 최소 한 명의 유저를 선택해야 합니다.', 'warning');
+                        return;
+                    }
+                }
+            });
+        }
     });
     </script>
 </body>

@@ -1,0 +1,709 @@
+<!-- Bootstrap 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="/home.png" alt="로고" class="logo">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
+                </li>
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <li class="nav-item">
+                        <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
+                    </li>
+                <% } %>
+            </ul>
+            <div class="d-flex align-items-center">
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <!-- 알림창 버튼 -->
+                    <div class="dropdown me-2">
+                        <button class="btn btn-outline-light notification-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="알림">
+                            <i class="bi bi-bell"></i>
+                            <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown">
+                            <li class="dropdown-header">
+                                <i class="bi bi-bell me-2"></i>알림
+                            </li>
+                            <li class="notification-controls">
+                                <div class="notification-selection">
+                                    <input type="checkbox" id="selectAllNotifications" class="form-check-input">
+                                    <label for="selectAllNotifications" class="form-check-label">전체선택</label>
+                                    <span id="selectedNotificationCount" class="text-muted">(0개 선택)</span>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="markSelectedAsRead">
+                                        <i class="bi bi-check"></i> 읽음
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" id="deleteSelectedNotifications">
+                                        <i class="bi bi-trash"></i> 삭제
+                                    </button>
+                                </div>
+                            </li>
+                            <li id="notificationList">
+                                <div class="dropdown-item-text text-center text-muted py-3">
+                                    <i class="bi bi-bell-slash display-6 d-block mb-2"></i>
+                                    알림이 없습니다
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
+                    <% if (user.role === 'admin') { %>
+                    <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
+                    <% } %>
+                    <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
+                <% } else { %>
+                    <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
+                    <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                <% } %>
+            </div>
+            </div>
+</div>
+</nav>
+
+<!-- 확인 다이얼로그 모달 -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">확인</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmModalMessage">정말로 삭제하시겠습니까?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="confirmModalConfirm">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 토스트 알림 컨테이너 -->
+<div class="toast-container position-fixed end-0 p-3" style="z-index: 1100; top: 80px;">
+</div>
+
+<!-- 개별 알림 상세보기 모달 -->
+<div class="modal fade" id="notificationDetailModal" tabindex="-1" aria-labelledby="notificationDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="notificationModalHeader">
+                <h5 class="modal-title" id="notificationDetailModalLabel">
+                    <i class="bi bi-bell me-2"></i><span id="modalNotificationTitle">알림 상세</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">제목:</label>
+                    <h6 id="modalNotificationTitleText"></h6>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">내용:</label>
+                    <p id="modalNotificationMessage"></p>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <label class="form-label text-muted">우선순위:</label>
+                        <p id="modalNotificationPriority"></p>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted">시간:</label>
+                        <p id="modalNotificationTime"></p>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">상태:</label>
+                    <p id="modalNotificationStatus"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" id="modalMarkAsRead" style="display: none;">
+                    <i class="bi bi-check"></i> 읽음 처리
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="modalDeleteNotification">
+                    <i class="bi bi-trash"></i> 삭제
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 알림 기능을 위한 스크립트 -->
+<script>
+// 확인 다이얼로그 함수
+function showConfirmModal(message, onConfirm, confirmText = '삭제', confirmClass = 'btn-danger') {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const messageElement = document.getElementById('confirmModalMessage');
+    const confirmButton = document.getElementById('confirmModalConfirm');
+    
+    messageElement.textContent = message;
+    confirmButton.textContent = confirmText;
+    confirmButton.className = `btn ${confirmClass}`;
+    
+    // 기존 이벤트 리스너 제거
+    const newConfirmButton = confirmButton.cloneNode(true);
+    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+    
+    // 새 이벤트 리스너 추가
+    newConfirmButton.addEventListener('click', function() {
+        modal.hide();
+        onConfirm();
+    });
+    
+    modal.show();
+}
+
+// 토스트 알림 함수
+function showToast(message, type = 'info', duration = 3000) {
+    const toastContainer = document.querySelector('.toast-container');
+    const toastId = 'toast_' + Date.now();
+    
+    // 토스트 타입별 색상 및 아이콘 설정
+    const config = {
+        success: {
+            bgClass: 'text-bg-success',
+            icon: 'bi-check-circle-fill',
+            title: '성공'
+        },
+        error: {
+            bgClass: 'text-bg-danger', 
+            icon: 'bi-exclamation-triangle-fill',
+            title: '오류'
+        },
+        warning: {
+            bgClass: 'text-bg-warning',
+            icon: 'bi-exclamation-triangle-fill', 
+            title: '경고'
+        },
+        info: {
+            bgClass: 'text-bg-info',
+            icon: 'bi-info-circle-fill',
+            title: '알림'
+        }
+    };
+    
+    const currentConfig = config[type] || config.info;
+    
+    // 토스트 HTML 생성
+    const toastHtml = `
+        <div id="${toastId}" class="toast ${currentConfig.bgClass}" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 300px; max-width: 400px;">
+            <div class="toast-header">
+                <i class="bi ${currentConfig.icon} me-2"></i>
+                <strong class="me-auto">${currentConfig.title}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" style="word-wrap: break-word; white-space: pre-line;">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    // 토스트를 컨테이너에 추가
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // 토스트 인스턴스 생성 및 표시
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: duration
+    });
+    
+    // 토스트가 숨겨진 후 DOM에서 제거
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+    });
+    
+    toast.show();
+}
+
+// 전역 함수들 정의
+async function loadNotifications() {
+    try {
+        // 캐시 방지를 위한 타임스탬프 추가
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/notifications?_t=${timestamp}`);
+        if (response.ok) {
+            const notifications = await response.json();
+            localStorage.setItem('currentNotifications', JSON.stringify(notifications));
+            updateNotificationUI(notifications);
+            console.log('알림 목록 새로고침 완료:', notifications.length + '개');
+        } else if (response.status === 401) {
+            localStorage.setItem('currentNotifications', JSON.stringify([]));
+            updateNotificationUI([]);
+        } else {
+            console.error('알림 로드 실패:', response.statusText);
+            updateNotificationUI([]);
+        }
+    } catch (error) {
+        console.error('알림 로드 오류:', error);
+        updateNotificationUI([]);
+    }
+}
+
+function updateNotificationUI(notifications) {
+    const badge = document.getElementById('notificationBadge');
+    const notificationList = document.getElementById('notificationList');
+    
+    const unreadCount = notifications.filter(n => !n.read).length;
+    
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+    
+    if (notifications.length > 0) {
+        notificationList.innerHTML = notifications.map(notification => `
+            <li>
+                <div class="dropdown-item notification-item ${!notification.read ? 'unread' : ''}" data-id="${notification.id}">
+                    <input type="checkbox" class="form-check-input notification-checkbox" data-notification-id="${notification.id}">
+                    <div class="notification-content" data-notification-id="${notification.id}" 
+                         data-title="${escapeHtml(notification.title)}"
+                         data-message="${escapeHtml(notification.message)}"
+                         data-time="${notification.time}"
+                         data-priority="${notification.priority}"
+                         data-read="${notification.read}">
+                        <strong class="${notification.priority === 1 ? 'text-warning' : ''}">${notification.title}</strong>
+                        <p>${notification.message}</p>
+                        <div class="notification-actions">
+                            <div>
+                                ${notification.priority === 1 ? '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i>중요</span>' : ''}
+                                ${!notification.read ? '<span class="badge bg-primary rounded-pill">NEW</span>' : ''}
+                            </div>
+                            <small class="text-muted">${notification.time}</small>
+                        </div>
+                    </div>
+                    <button type="button" class="notification-delete-btn" data-notification-id="${notification.id}" title="삭제">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </li>
+        `).join('') + `
+            <li><hr class="dropdown-divider"></li>
+            <li class="px-3 pb-2">
+                <div class="btn-group w-100">
+                    <button class="btn btn-outline-primary btn-sm" id="markAllAsRead" type="button">
+                        <i class="bi bi-check-all"></i> 일반 알림 읽음
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" id="deleteReadNotifications" type="button">
+                        <i class="bi bi-trash"></i> 읽은 알림 삭제
+                    </button>
+                </div>
+            </li>
+        `;
+    } else {
+        // 알림이 없을 때 기본 메시지 표시
+        notificationList.innerHTML = `
+            <div class="dropdown-item-text text-center text-muted py-3">
+                <i class="bi bi-bell-slash display-6 d-block mb-2"></i>
+                알림이 없습니다
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '&#10;')
+        .replace(/\r/g, '&#13;');
+}
+
+function unescapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    return div.textContent || div.innerText || '';
+}
+
+function openNotificationDetail(id, title, message, time, priority, read) {
+    console.log('openNotificationDetail 호출됨:', { id, title, message, time, priority, read });
+    
+    const modal = new bootstrap.Modal(document.getElementById('notificationDetailModal'));
+    const modalHeader = document.getElementById('notificationModalHeader');
+    const modalTitle = document.getElementById('modalNotificationTitle');
+    const modalTitleText = document.getElementById('modalNotificationTitleText');
+    const modalMessage = document.getElementById('modalNotificationMessage');
+    const modalPriority = document.getElementById('modalNotificationPriority');
+    const modalTime = document.getElementById('modalNotificationTime');
+    const modalStatus = document.getElementById('modalNotificationStatus');
+    const modalMarkAsRead = document.getElementById('modalMarkAsRead');
+    const modalDeleteBtn = document.getElementById('modalDeleteNotification');
+    
+    // HTML 엔티티 디코딩
+    const decodedTitle = unescapeHtml(title);
+    const decodedMessage = unescapeHtml(message);
+    
+    modalTitle.textContent = '알림 상세';
+    modalTitleText.textContent = decodedTitle;
+    modalMessage.textContent = decodedMessage;
+    modalPriority.innerHTML = priority === 1 ? 
+        '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i>중요</span>' : 
+        '<span class="badge bg-secondary">일반</span>';
+    modalTime.textContent = time;
+    modalStatus.innerHTML = read ? 
+        '<span class="badge bg-success">읽음</span>' : 
+        '<span class="badge bg-primary">NEW</span>';
+    
+    if (priority === 1) {
+        modalHeader.className = 'modal-header bg-warning text-dark';
+    } else {
+        modalHeader.className = 'modal-header bg-primary text-white';
+    }
+    
+    if (!read) {
+        modalMarkAsRead.style.display = 'inline-block';
+        modalMarkAsRead.onclick = () => {
+            markAsRead(id).then(() => {
+                loadNotifications();
+                modal.hide();
+            });
+        };
+    } else {
+        modalMarkAsRead.style.display = 'none';
+    }
+    
+    modalDeleteBtn.onclick = () => {
+        modal.hide();
+        deleteNotification(id);
+    };
+    
+    // 모달 이벤트 리스너 추가
+    const modalElement = document.getElementById('notificationDetailModal');
+    modalElement.addEventListener('shown.bs.modal', function() {
+        // 모달이 완전히 표시된 후 z-index 설정
+        this.style.zIndex = '1070';
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.style.zIndex = '1065';
+        }
+        console.log('모달 z-index 설정 완료');
+    }, { once: true });
+    
+    modal.show();
+    
+    if (!read) {
+        setTimeout(() => {
+            markAsRead(id).then(() => {
+                loadNotifications();
+                modalStatus.innerHTML = '<span class="badge bg-success">읽음</span>';
+                modalMarkAsRead.style.display = 'none';
+            });
+        }, 1000);
+    }
+}
+
+async function deleteNotification(id) {
+    console.log('삭제할 알림 ID:', id);
+    
+    showConfirmModal('이 알림을 삭제하시겠습니까?', async function() {
+        // 즉시 UI에서 해당 알림 제거 (낙관적 업데이트)
+        const notificationElement = document.querySelector(`[data-id="${id}"]`);
+        if (notificationElement) {
+            notificationElement.parentElement.remove();
+            updateNotificationBadge();
+        }
+        
+        try {
+            console.log('DELETE 요청 시작:', `/api/notifications/${id}`);
+            const response = await fetch(`/api/notifications/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            console.log('서버 응답 상태:', response.status);
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('알림 삭제 성공:', result);
+                // 서버에서 확인 후 전체 목록 새로고침
+                await loadNotifications();
+            } else {
+                const error = await response.json();
+                console.error('삭제 실패 응답:', error);
+                showToast('알림 삭제에 실패했습니다: ' + (error.error || '알 수 없는 오류'), 'error');
+                // 실패 시 전체 목록 새로고침하여 원상복구
+                await loadNotifications();
+            }
+        } catch (error) {
+            console.error('알림 삭제 오류:', error);
+            showToast('알림 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+            // 오류 시 전체 목록 새로고침하여 원상복구
+            await loadNotifications();
+        }
+    });
+}
+
+async function markAsRead(notificationId) {
+    try {
+        const response = await fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            throw new Error('읽음 처리 실패');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('알림 읽음 처리 오류:', error);
+    }
+}
+
+async function deleteSelectedNotifications() {
+    const selectedIds = getSelectedNotificationIds();
+    console.log('선택된 알림 IDs:', selectedIds);
+    
+    if (selectedIds.length === 0) {
+        showToast('삭제할 알림을 선택해주세요.', 'warning');
+        return;
+    }
+    
+    showConfirmModal(`선택된 ${selectedIds.length}개의 알림을 삭제하시겠습니까?`, async function() {
+    
+    // 즉시 UI에서 선택된 알림들 제거 (낙관적 업데이트)
+    selectedIds.forEach(id => {
+        const notificationElement = document.querySelector(`[data-id="${id}"]`);
+        if (notificationElement) {
+            notificationElement.parentElement.remove();
+        }
+    });
+    updateNotificationBadge();
+    document.getElementById('selectAllNotifications').checked = false;
+    updateSelectionState();
+    
+    try {
+        console.log('선택 삭제 요청 데이터:', { notificationIds: selectedIds });
+        const response = await fetch('/api/notifications', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationIds: selectedIds })
+        });
+        
+        console.log('선택 삭제 응답 상태:', response.status);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('선택 삭제 성공:', result);
+            // 서버에서 확인 후 전체 목록 새로고침
+            await loadNotifications();
+        } else {
+            const error = await response.json();
+            console.error('선택 삭제 실패 응답:', error);
+            showToast('선택된 알림 삭제에 실패했습니다: ' + (error.error || '알 수 없는 오류'), 'error');
+            // 실패 시 전체 목록 새로고침하여 원상복구
+            await loadNotifications();
+        }
+    } catch (error) {
+        console.error('선택 알림 삭제 오류:', error);
+        showToast('알림 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+        // 오류 시 전체 목록 새로고침하여 원상복구
+        await loadNotifications();
+    }
+    });
+}
+
+async function deleteReadNotifications() {
+    console.log('읽은 알림 삭제 요청');
+    showConfirmModal('읽은 알림을 모두 삭제하시겠습니까?', async function() {
+    
+    // 즉시 UI에서 읽은 알림들 제거 (낙관적 업데이트)
+    const readNotifications = document.querySelectorAll('.notification-item:not(.unread)');
+    readNotifications.forEach(notification => {
+        notification.parentElement.remove();
+    });
+    updateNotificationBadge();
+    
+    try {
+        console.log('읽은 알림 삭제 API 호출');
+        const response = await fetch('/api/notifications/read', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        console.log('읽은 알림 삭제 응답 상태:', response.status);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('읽은 알림 삭제 성공:', result);
+            // 서버에서 확인 후 전체 목록 새로고침
+            await loadNotifications();
+            if (result.deletedCount > 0) {
+                showToast(`${result.deletedCount}개의 읽은 알림이 삭제되었습니다.`, 'success');
+            } else {
+                showToast('삭제할 읽은 알림이 없습니다.', 'info');
+            }
+        } else {
+            const error = await response.json();
+            console.error('읽은 알림 삭제 실패 응답:', error);
+            showToast('읽은 알림 삭제에 실패했습니다: ' + (error.error || '알 수 없는 오류'), 'error');
+            // 실패 시 전체 목록 새로고침하여 원상복구
+            await loadNotifications();
+        }
+    } catch (error) {
+        console.error('읽은 알림 삭제 오류:', error);
+        showToast('알림 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+        // 오류 시 전체 목록 새로고침하여 원상복구
+        await loadNotifications();
+    }
+    });
+}
+
+function getSelectedNotificationIds() {
+    return Array.from(document.querySelectorAll('.notification-checkbox:checked'))
+        .map(checkbox => parseInt(checkbox.dataset.notificationId));
+}
+
+function updateSelectionState() {
+    const selectedCount = getSelectedNotificationIds().length;
+    const selectedCountElements = document.querySelectorAll('#selectedNotificationCount, #modalSelectedCount');
+    
+    selectedCountElements.forEach(element => {
+        if (element) element.textContent = `(${selectedCount}개 선택)`;
+    });
+}
+
+function toggleSelectAll(selectAll = null) {
+    const checkboxes = document.querySelectorAll('.notification-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllNotifications');
+    
+    if (selectAll === null) {
+        selectAll = selectAllCheckbox ? selectAllCheckbox.checked : false;
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll;
+    });
+    
+    updateSelectionState();
+}
+
+function updateNotificationBadge() {
+    const unreadItems = document.querySelectorAll('.notification-item.unread');
+    const badge = document.getElementById('notificationBadge');
+    
+    if (unreadItems.length > 0) {
+        badge.textContent = unreadItems.length > 99 ? '99+' : unreadItems.length;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+async function markAllAsRead() {
+    try {
+        const response = await fetch('/api/notifications/read-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast(`${result.updatedCount}개의 일반 알림을 읽음 처리했습니다. (중요 알림 제외)`, 'success');
+            loadNotifications();
+        } else {
+            showToast('알림 읽음 처리에 실패했습니다.', 'error');
+        }
+    } catch (error) {
+        console.error('전체 읽음 처리 오류:', error);
+        showToast('알림 처리 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+async function markSelectedAsRead() {
+    const selectedIds = getSelectedNotificationIds();
+    if (selectedIds.length === 0) {
+        showToast('읽음 처리할 알림을 선택해주세요.', 'warning');
+        return;
+    }
+    
+    for (const id of selectedIds) {
+        await markAsRead(id);
+    }
+    
+    loadNotifications();
+}
+
+// DOM 로드 완료 후 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    // 이벤트 리스너들
+    document.addEventListener('click', function(e) {
+        // 알림 내용 클릭 이벤트
+        if (e.target.closest('.notification-content')) {
+            const notificationContent = e.target.closest('.notification-content');
+            const id = parseInt(notificationContent.dataset.notificationId);
+            const title = notificationContent.dataset.title;
+            const message = notificationContent.dataset.message;
+            const time = notificationContent.dataset.time;
+            const priority = parseInt(notificationContent.dataset.priority);
+            const read = notificationContent.dataset.read === 'true';
+            
+            console.log('알림 내용 클릭됨:', { id, title, message, time, priority, read });
+            openNotificationDetail(id, title, message, time, priority, read);
+            return;
+        }
+        // 개별 알림 삭제 버튼
+        if (e.target.classList.contains('notification-delete-btn') || e.target.closest('.notification-delete-btn')) {
+            const deleteBtn = e.target.classList.contains('notification-delete-btn') ? e.target : e.target.closest('.notification-delete-btn');
+            const notificationId = deleteBtn.dataset.notificationId;
+            if (notificationId) {
+                console.log('알림창에서 삭제 버튼 클릭됨:', notificationId);
+                deleteNotification(notificationId);
+            }
+            return;
+        }
+        
+        if (e.target.id === 'selectAllNotifications') {
+            toggleSelectAll();
+        }
+        
+        if (e.target.classList.contains('notification-checkbox')) {
+            updateSelectionState();
+        }
+        
+        if (e.target.id === 'markSelectedAsRead' || e.target.closest('#markSelectedAsRead')) {
+            markSelectedAsRead();
+        }
+        
+        if (e.target.id === 'deleteSelectedNotifications' || e.target.closest('#deleteSelectedNotifications')) {
+            deleteSelectedNotifications();
+        }
+        
+        if (e.target.id === 'markAllAsRead' || e.target.closest('#markAllAsRead')) {
+            markAllAsRead();
+        }
+        
+        if (e.target.id === 'deleteReadNotifications' || e.target.closest('#deleteReadNotifications')) {
+            deleteReadNotifications();
+        }
+    });
+
+    // 초기 알림 로드
+    loadNotifications();
+    
+    // 30초마다 알림 업데이트
+    setInterval(loadNotifications, 30000);
+});
+</script> 

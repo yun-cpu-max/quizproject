@@ -4,6 +4,36 @@ const db = require('../db');
 const path = require('path');
 const fs = require('fs');
 
+// 알림 발송 헬퍼 함수
+function sendNotificationToUser(userId, title, message, priority = 0, createdBy = 1) {
+    return new Promise((resolve, reject) => {
+        const insertNotificationQuery = `
+            INSERT INTO notifications (title, message, notification_type, priority, is_system_wide, created_by)
+            VALUES (?, ?, 'info', ?, 0, ?)
+        `;
+        
+        db.query(insertNotificationQuery, [title, message, priority, createdBy], (err, result) => {
+            if (err) {
+                return reject(err);
+            }
+            
+            const notificationId = result.insertId;
+            
+            const insertUserNotificationQuery = `
+                INSERT INTO user_notifications (user_id, notification_id, is_read)
+                VALUES (?, ?, 0)
+            `;
+            
+            db.query(insertUserNotificationQuery, [userId, notificationId], (err) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(notificationId);
+            });
+        });
+    });
+}
+
 // 관리자 페이지
 router.get('/', async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
@@ -121,6 +151,7 @@ router.get('/', async (req, res) => {
                             quizSearchId,
                             quizSearchTitle,
                             successMessage: req.query.success || null,
+                            notificationMessage: req.query.notification || null,
                             error: req.query.error || null
                         });
                     });
@@ -210,6 +241,7 @@ router.post('/approve', (req, res) => {
         return res.redirect('/');
     }
     const id = parseInt(req.body.idx);
+    console.log(`[퀴즈 승인] 관리자 ID: ${req.session.user.id}, 퀴즈 ID: ${id}`);
     // pending_quiz에서 해당 퀴즈 데이터 조회
     db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], (err, results) => {
         if (err || results.length === 0) return res.redirect('/admin');
@@ -331,10 +363,22 @@ router.post('/approve', (req, res) => {
                 });
 
                 Promise.all(insertQuestions)
-                    .then(() => {
+                    .then(async () => {
                         console.log('모든 문제 저장 완료');
+                        
+                        // 퀴즈 작성자에게 승인 알림 발송
+                        try {
+                            const notificationTitle = "신청한 퀴즈가 승인되었습니다.";
+                            const notificationMessage = `${quiz.title} 퀴즈가 승인받아 성공적으로 등록되었습니다.`;
+                            
+                            await sendNotificationToUser(quiz.created_by, notificationTitle, notificationMessage, 1, req.session.user.id);
+                            console.log('퀴즈 승인 알림 발송 완료:', quiz.created_by);
+                        } catch (notificationError) {
+                            console.error('퀴즈 승인 알림 발송 실패:', notificationError);
+                        }
+                        
                         db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
-                            res.redirect('/admin');
+                            res.redirect('/admin?success=퀴즈가 성공적으로 승인되었습니다.');
                         });
                     })
                     .catch((err) => {
@@ -347,14 +391,15 @@ router.post('/approve', (req, res) => {
 });
 
 // 퀴즈 거절
-router.post('/reject', (req, res) => {
+router.post('/reject', async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.redirect('/');
     }
     const id = parseInt(req.body.idx);
+    const rejectReason = req.body.rejectReason || '승인 기준에 부합하지 않습니다.';
 
     // 1. pending_quiz에서 해당 퀴즈 데이터 조회
-    db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], (err, results) => {
+    db.query('SELECT * FROM pending_quiz WHERE id = ?', [id], async (err, results) => {
         if (err || results.length === 0) {
             db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
                 return res.redirect('/admin');
@@ -362,6 +407,16 @@ router.post('/reject', (req, res) => {
             return;
         }
         const quiz = results[0];
+        
+        // 퀴즈 작성자에게 거절 알림 발송
+        try {
+            const notificationTitle = "신청한 퀴즈가 거절되었습니다.";
+            const notificationMessage = `${quiz.title} 퀴즈가 거절되었습니다.\n\n거절 사유: ${rejectReason}`;
+            
+            await sendNotificationToUser(quiz.created_by, notificationTitle, notificationMessage, 1, req.session.user.id);
+        } catch (notificationError) {
+            console.error('퀴즈 거절 알림 발송 실패:', notificationError);
+        }
 
         // 2. 문제 이미지 삭제
         let questions = [];
@@ -391,7 +446,7 @@ router.post('/reject', (req, res) => {
 
         // 4. DB에서 삭제
         db.query('DELETE FROM pending_quiz WHERE id = ?', [id], () => {
-            res.redirect('/admin');
+            res.redirect('/admin?success=퀴즈가 거절되었습니다.');
         });
     });
 });
@@ -408,6 +463,73 @@ router.post('/notice', (req, res) => {
             return res.redirect('/admin?error=공지사항 등록에 실패했습니다.');
         }
         res.redirect('/notice?success=공지사항이 성공적으로 등록되었습니다.');
+    });
+});
+
+// 알림 등록
+router.post('/notification', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.redirect('/');
+    }
+
+    const { targetType, targetUsers, title, message, isImportant } = req.body;
+    const createdBy = req.session.user.id;
+    const priority = isImportant ? 1 : 0; // 1: 중요, 0: 일반
+    const isSystemWide = targetType === 'all' ? 1 : 0;
+
+    // 알림 생성
+    const insertNotificationQuery = `
+        INSERT INTO notifications (title, message, notification_type, priority, is_system_wide, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(insertNotificationQuery, [title, message, 'info', priority, isSystemWide, createdBy], (err, result) => {
+        if (err) {
+            console.error('알림 등록 실패:', err);
+            return res.redirect('/admin?error=알림 등록에 실패했습니다.');
+        }
+
+        const notificationId = result.insertId;
+
+        if (targetType === 'all') {
+            // 모든 유저에게 알림
+            const insertUserNotificationsQuery = `
+                INSERT INTO user_notifications (user_id, notification_id, is_read)
+                SELECT id, ?, 0 FROM user WHERE role != 'admin'
+            `;
+            
+            db.query(insertUserNotificationsQuery, [notificationId], (err) => {
+                if (err) {
+                    console.error('전체 유저 알림 등록 실패:', err);
+                    return res.redirect('/admin?error=전체 유저 알림 등록에 실패했습니다.');
+                }
+                res.redirect('/admin?notification=모든 유저에게 알림이 성공적으로 등록되었습니다.');
+            });
+        } else if (targetType === 'specific' && targetUsers) {
+            // 특정 유저들에게 알림
+            const userIds = Array.isArray(targetUsers) ? targetUsers : [targetUsers];
+            
+            if (userIds.length === 0) {
+                return res.redirect('/admin?error=대상 유저를 선택해주세요.');
+            }
+
+            const insertUserNotificationsQuery = `
+                INSERT INTO user_notifications (user_id, notification_id, is_read)
+                VALUES ?
+            `;
+            
+            const values = userIds.map(userId => [userId, notificationId, 0]);
+            
+            db.query(insertUserNotificationsQuery, [values], (err) => {
+                if (err) {
+                    console.error('특정 유저 알림 등록 실패:', err);
+                    return res.redirect('/admin?error=특정 유저 알림 등록에 실패했습니다.');
+                }
+                res.redirect(`/admin?notification=${userIds.length}명의 유저에게 알림이 성공적으로 등록되었습니다.`);
+            });
+        } else {
+            res.redirect('/admin?error=대상을 선택해주세요.');
+        }
     });
 });
 

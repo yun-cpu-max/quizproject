@@ -339,47 +339,8 @@
     </style>
 </head>
 <body>
-    <!-- Bootstrap 네비게이션 바 -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" class="logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
-                    </li>
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <li class="nav-item">
-                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
-                        </li>
-                    <% } %>
-                </ul>
-                <div class="d-flex">
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
-                        <% if (user.role === 'admin') { %>
-                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
-                        <% } %>
-                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
-                    <% } else { %>
-                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
-                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- 공통 네비게이션 바 -->
+    <%- include('partials/navbar') %>
 
     <div class="ranking-container">
         <div class="container">
@@ -532,44 +493,181 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let currentPeriod = 'all';
+        let currentTabType = 'correct-answers';
+
+        // UI 업데이트 함수
+        function updateRankingUI(rankingType, data) {
+            const listContainerId = rankingType;
+            const listContainer = document.querySelector(`#${listContainerId} .ranking-list`);
+            if (!listContainer) {
+                console.error('List container not found for:', listContainerId);
+                return;
+            }
+
+            listContainer.innerHTML = '';
+
+            if (data && data.length > 0) {
+                data.forEach((item, index) => {
+                    let positionClass = 'other';
+                    if (index === 0) positionClass = 'gold';
+                    else if (index === 1) positionClass = 'silver';
+                    else if (index === 2) positionClass = 'bronze';
+
+                    let name = item.username || item.title;
+                    let details = '';
+                    let score = '';
+                    let scoreLabel = '';
+
+                    if (rankingType === 'correct-answers') {
+                        details = `정답률: ${item.accuracy !== undefined ? item.accuracy.toFixed(2) + '%' : 'N/A'}`;
+                        score = item.correctAnswers !== undefined ? item.correctAnswers : 'N/A';
+                        scoreLabel = '문제';
+                    } else if (rankingType === 'completed-quiz') {
+                        details = `평균 점수: ${item.averageScore !== undefined ? item.averageScore.toFixed(1) + '점' : 'N/A'}`;
+                        score = item.completedQuizzes !== undefined ? item.completedQuizzes : 'N/A';
+                        scoreLabel = '퀴즈';
+                    } else if (rankingType === 'popular-quiz') {
+                        details = `카테고리: ${item.category || 'N/A'} | 평균 점수: ${item.averageScore !== undefined ? item.averageScore.toFixed(1) + '점' : 'N/A'}`;
+                        score = item.participantCount !== undefined ? item.participantCount : 'N/A';
+                        scoreLabel = '명 참여';
+                    }
+
+                    const itemHtml = `
+                        <div class="ranking-item">
+                            <div class="ranking-position ${positionClass}">
+                                ${index + 1}
+                            </div>
+                            <div class="ranking-info">
+                                <div class="ranking-name">${name}</div>
+                                <div class="ranking-details">${details}</div>
+                            </div>
+                            <div class="ranking-score">
+                                ${score}
+                                <div class="ranking-score-label">${scoreLabel}</div>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.insertAdjacentHTML('beforeend', itemHtml);
+                });
+            } else {
+                let emptyMessageTitle = '아직 랭킹 데이터가 없습니다';
+                let emptyMessageSub = '퀴즈를 풀고 랭킹에 도전해보세요!';
+                let iconClass = 'bi-trophy';
+                if(rankingType === 'completed-quiz') iconClass = 'bi-list-check';
+                if(rankingType === 'popular-quiz') iconClass = 'bi-people';
+
+                listContainer.innerHTML = `
+                    <div class="empty-ranking">
+                        <i class="bi ${iconClass}"></i>
+                        <h4>${emptyMessageTitle}</h4>
+                        <p>${emptyMessageSub}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 데이터 가져오기 함수
+        async function fetchRankingData(period, tabIdType) {
+            try {
+                let apiType = '';
+                if (tabIdType === 'correct-answers') apiType = 'correctAnswers';
+                else if (tabIdType === 'completed-quiz') apiType = 'completedQuiz';
+                else if (tabIdType === 'popular-quiz') apiType = 'popularQuiz';
+                else {
+                    console.error('Unknown tabIdType for API:', tabIdType);
+                    return;
+                }
+
+                const response = await fetch(`/api/ranking?period=${period}&type=${apiType}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
+                }
+                const data = await response.json();
+                updateRankingUI(tabIdType, data);
+            } catch (error) {
+                console.error('Error fetching ranking data:', error);
+                const listContainer = document.querySelector(`#${tabIdType} .ranking-list`);
+                if(listContainer) listContainer.innerHTML = '<div class="empty-ranking"><p>랭킹 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.</p></div>';
+            }
+        }
+
         // 기간 선택 버튼 이벤트
         document.querySelectorAll('.period-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                // 모든 버튼에서 active 클래스 제거
                 document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-                // 클릭된 버튼에 active 클래스 추가
                 this.classList.add('active');
-                
-                // 여기에 AJAX 요청을 통해 해당 기간의 데이터를 가져오는 로직 추가
-                const period = this.dataset.period;
-                console.log('Selected period:', period);
-                // TODO: 백엔드 API 호출하여 해당 기간의 랭킹 데이터 가져오기
+                currentPeriod = this.dataset.period;
+                fetchRankingData(currentPeriod, currentTabType);
             });
         });
 
         // 탭 변경 이벤트
-        let currentTab = 'correct-answers'; // 기본 탭
         document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
             tab.addEventListener('shown.bs.tab', function(event) {
-                const targetTabId = event.target.getAttribute('data-bs-target').substring(1); // # 제거
-                currentTab = targetTabId;
-                console.log('Active tab:', currentTab);
-                // TODO: 탭 변경 시 해당 랭킹 데이터 로드
-                // 예시: const period = document.querySelector('.period-btn.active').dataset.period;
-                //      fetch(`/api/ranking?period=${period}&type=${currentTab}`)
-                //      .then(response => response.json())
-                //      .then(data => updateRankingUI(data));
+                currentTabType = event.target.getAttribute('data-bs-target').substring(1);
+                fetchRankingData(currentPeriod, currentTabType);
+                
+                if (history.pushState) {
+                    history.pushState(null, null, `#${currentTabType}`);
+                } else {
+                    window.location.hash = `#${currentTabType}`;
+                }
             });
         });
 
-        // (선택 사항) UI 업데이트 함수 예시
-        // function updateRankingUI(data) {
-        //     // 1. 현재 활성화된 탭을 찾습니다.
-        //     // 2. 해당 탭 내부의 .ranking-list 를 비웁니다.
-        //     // 3. 받아온 data를 기반으로 새로운 랭킹 아이템들을 생성하여 .ranking-list에 추가합니다.
-        //     // 4. 데이터가 없을 경우 "아직 랭킹 데이터가 없습니다" 메시지를 표시합니다.
-        //     console.log('Updating UI with data:', data);
-        // }
+        // 페이지 로드 시 초기 데이터 로드 및 URL 해시 처리
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const periodFromUrl = urlParams.get('period') || 'all';
+            currentPeriod = periodFromUrl;
+
+            // 기간 버튼 UI 업데이트 (URL의 period 반영)
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.period === currentPeriod) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 초기 currentTabType 설정: SSR 시 active된 탭 또는 기본 첫 번째 탭
+            // EJS 템플릿에서 첫 번째 탭(.nav-link 와 .tab-pane)에 'active' 클래스가 설정되어 있어야 함
+            const activeTabLinkOnLoad = document.querySelector('.nav-tabs .nav-link.active');
+            if (activeTabLinkOnLoad) {
+                 currentTabType = activeTabLinkOnLoad.getAttribute('data-bs-target').substring(1);
+            } else {
+                // EJS에서 기본 active 탭 설정이 안되어있을 경우를 대비한 방어 코드
+                currentTabType = 'correct-answers'; 
+                const firstTabLink = document.querySelector('.nav-tabs .nav-link[data-bs-target="#correct-answers"]');
+                if (firstTabLink && !firstTabLink.classList.contains('active')) {
+                     // new bootstrap.Tab(firstTabLink).show(); // 이 호출은 shown.bs.tab을 트리거하여 AJAX 로드를 유발함
+                                                               // 초기 로드 시에는 SSR 데이터를 사용하므로, 아래 해시 처리에서 필요시 탭 전환.
+                }
+            }
+
+            // URL 해시가 있다면 해당 탭으로 전환 (필요시)
+            // 해시로 탭을 전환하면 'shown.bs.tab' 이벤트가 발생하고, 해당 핸들러에서 fetchRankingData가 호출됨.
+            if (window.location.hash) {
+                const hashTabId = window.location.hash.substring(1);
+                const tabElementToActivateByHash = document.querySelector(`.nav-tabs .nav-link[data-bs-target="#${hashTabId}"]`);
+                
+                if (tabElementToActivateByHash) {
+                    if (hashTabId !== currentTabType) { // 현재 활성 탭과 해시 탭이 다를 경우에만 show() 호출
+                        const tab = new bootstrap.Tab(tabElementToActivateByHash);
+                        tab.show(); // 'shown.bs.tab' 이벤트 발생 -> AJAX 데이터 로드
+                        // currentTabType은 shown.bs.tab 핸들러에서 업데이트됨
+                    } else {
+                        // 해시 탭이 이미 SSR에 의해 활성화된 탭과 동일함.
+                        // 서버가 URL의 period를 보고 데이터를 내려줬으므로 추가 AJAX 호출은 불필요.
+                    }
+                }
+            } else {
+                // URL에 해시가 없는 경우: SSR된 상태 (기본 활성 탭, URL의 period에 맞는 데이터) 그대로 유지.
+                // 불필요한 fetchRankingData 호출 없음.
+            }
+            // 사용자가 직접 기간 버튼을 클릭하거나, 다른 탭으로 네비게이트 할 때 
+            // 해당 이벤트 리스너들 내부에서 fetchRankingData가 호출될 것임.
+        });
     </script>
 </body>
 </html> 
