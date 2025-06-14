@@ -88,8 +88,18 @@ router.post('/create', upload.any(), async (req, res) => {
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && thumbnailFile) {
-        // temp 폴더 경로로 저장
-        thumbnailUrl = '/uploads/temp/' + thumbnailFile.filename;
+        // temp 폴더에서 실제 저장 폴더로 이동
+        const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', thumbnailFile.filename);
+        const newPath = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails', thumbnailFile.filename);
+        
+        // thumbnails 디렉토리가 없으면 생성
+        const thumbnailsDir = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails');
+        if (!fs.existsSync(thumbnailsDir)) {
+            fs.mkdirSync(thumbnailsDir, { recursive: true });
+        }
+        
+        fs.renameSync(oldPath, newPath);
+        thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
     }
 
     // 문제 이미지 처리 (프론트에서 문제별 이미지 업로드 구현 필요)
@@ -881,9 +891,20 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && thumbnailFile) {
+        // temp 폴더에서 실제 저장 폴더로 이동
+        const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', thumbnailFile.filename);
+        const newPath = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails', thumbnailFile.filename);
+        
+        // thumbnails 디렉토리가 없으면 생성
+        const thumbnailsDir = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails');
+        if (!fs.existsSync(thumbnailsDir)) {
+            fs.mkdirSync(thumbnailsDir, { recursive: true });
+        }
+        
+        fs.renameSync(oldPath, newPath);
         thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
     } else if (thumbnailType === 'keep') {
-        // 기존 썸네일 유지 - 현재 값을 조회해서 사용
+        // 기존 썸네일 유지
         db.query('SELECT thumbnail_url FROM quiz WHERE id = ?', [quizId], (err, results) => {
             if (!err && results.length > 0) {
                 thumbnailUrl = results[0].thumbnail_url;
@@ -898,6 +919,17 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
         questionsArr = questionsArr.map((q, idx) => {
             const qimg = req.files.find(f => f.fieldname === `questions[${idx + 1}][image]`);
             if (qimg) {
+                // temp 폴더에서 실제 저장 폴더로 이동
+                const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', qimg.filename);
+                const newPath = path.join(__dirname, '..', 'public', 'uploads', 'questions', qimg.filename);
+                
+                // questions 디렉토리가 없으면 생성
+                const questionsDir = path.join(__dirname, '..', 'public', 'uploads', 'questions');
+                if (!fs.existsSync(questionsDir)) {
+                    fs.mkdirSync(questionsDir, { recursive: true });
+                }
+                
+                fs.renameSync(oldPath, newPath);
                 q.image = '/uploads/questions/' + qimg.filename;
             }
             return q;
@@ -918,8 +950,8 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
         
         // 1. 퀴즈 기본 정보 업데이트
         const updateQuizQuery = thumbnailType === 'keep' 
-            ? 'UPDATE quiz SET title = ?, description = ?, category = ?, updated_at = NOW() WHERE id = ?'
-            : 'UPDATE quiz SET title = ?, description = ?, category = ?, thumbnail_url = ?, updated_at = NOW() WHERE id = ?';
+            ? 'UPDATE quiz SET title = ?, description = ?, category = ? WHERE id = ?'
+            : 'UPDATE quiz SET title = ?, description = ?, category = ?, thumbnail_url = ? WHERE id = ?';
         
         const updateQuizParams = thumbnailType === 'keep' 
             ? [title, description, category, quizId]
@@ -939,12 +971,12 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
             }
             
             // 2. 기존 문제들과 선택지들 삭제
-            db.query('DELETE FROM question_option WHERE question_id IN (SELECT id FROM question WHERE quiz_id = ?)', [quizId], (err) => {
+            db.query('DELETE FROM question_responses WHERE question_id IN (SELECT id FROM question WHERE quiz_id = ?)', [quizId], (err) => {
                 if (err) {
-                    console.error('기존 선택지 삭제 오류:', err);
+                    console.error('기존 응답 기록 삭제 오류:', err);
                     return db.rollback(() => {
                         res.render('quiz/edit', { 
-                            error: '기존 선택지 삭제에 실패했습니다.', 
+                            error: '기존 응답 기록 삭제에 실패했습니다.', 
                             user: req.session.user,
                             quiz: { id: quizId },
                             questions: []
@@ -952,12 +984,12 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
                     });
                 }
                 
-                db.query('DELETE FROM question WHERE quiz_id = ?', [quizId], (err) => {
+                db.query('DELETE FROM question_option WHERE question_id IN (SELECT id FROM question WHERE quiz_id = ?)', [quizId], (err) => {
                     if (err) {
-                        console.error('기존 문제 삭제 오류:', err);
+                        console.error('기존 선택지 삭제 오류:', err);
                         return db.rollback(() => {
                             res.render('quiz/edit', { 
-                                error: '기존 문제 삭제에 실패했습니다.', 
+                                error: '기존 선택지 삭제에 실패했습니다.', 
                                 user: req.session.user,
                                 quiz: { id: quizId },
                                 questions: []
@@ -965,33 +997,47 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
                         });
                     }
                     
-                    // 3. 새로운 문제들 추가
-                    insertNewQuestions(quizId, questionsArr, req.files, req.session.user.id, db, (success) => {
-                        if (success) {
-                            db.commit((err) => {
-                                if (err) {
-                                    console.error('커밋 오류:', err);
-                                    return db.rollback(() => {
-                                        res.render('quiz/edit', { 
-                                            error: '수정 완료 처리에 실패했습니다.', 
-                                            user: req.session.user,
-                                            quiz: { id: quizId },
-                                            questions: []
-                                        });
-                                    });
-                                }
-                                res.redirect(`/quiz/list/${quizId}?updated=1`);
-                            });
-                        } else {
-                            db.rollback(() => {
+                    db.query('DELETE FROM question WHERE quiz_id = ?', [quizId], (err) => {
+                        if (err) {
+                            console.error('기존 문제 삭제 오류:', err);
+                            return db.rollback(() => {
                                 res.render('quiz/edit', { 
-                                    error: '새로운 문제 추가에 실패했습니다.', 
+                                    error: '기존 문제 삭제에 실패했습니다.', 
                                     user: req.session.user,
                                     quiz: { id: quizId },
                                     questions: []
                                 });
                             });
                         }
+                        
+                        // 3. 새로운 문제들 추가
+                        insertNewQuestions(quizId, questionsArr, req.files, req.session.user.id, db, (success) => {
+                            if (success) {
+                                db.commit((err) => {
+                                    if (err) {
+                                        console.error('커밋 오류:', err);
+                                        return db.rollback(() => {
+                                            res.render('quiz/edit', { 
+                                                error: '수정 완료 처리에 실패했습니다.', 
+                                                user: req.session.user,
+                                                quiz: { id: quizId },
+                                                questions: []
+                                            });
+                                        });
+                                    }
+                                    res.redirect(`/quiz/list/${quizId}?updated=1`);
+                                });
+                            } else {
+                                db.rollback(() => {
+                                    res.render('quiz/edit', { 
+                                        error: '새로운 문제 추가에 실패했습니다.', 
+                                        user: req.session.user,
+                                        quiz: { id: quizId },
+                                        questions: []
+                                    });
+                                });
+                            }
+                        });
                     });
                 });
             });
@@ -1008,67 +1054,77 @@ function insertNewQuestions(quizId, questionsArr, files, userId, db, callback) {
     let completedQuestions = 0;
     let hasError = false;
     
-    questionsArr.forEach((question, index) => {
-        if (hasError) return;
-        
-        const questionType = question.answer ? 'short_answer' : 'multiple_choice';
-        const correctAnswer = question.answer || '';
-        const questionImage = question.image || null;
-        
-        // 문제 삽입
-        db.query(
-            'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by, question_img_url) VALUES (?, ?, ?, ?, ?, ?)',
-            [quizId, question.text, questionType, correctAnswer, userId, questionImage],
-            (err, result) => {
-                if (err) {
-                    console.error('문제 삽입 오류:', err);
-                    hasError = true;
-                    return callback(false);
-                }
-                
-                const questionId = result.insertId;
-                
-                // 객관식인 경우 선택지 삽입
-                if (questionType === 'multiple_choice') {
-                    const options = [
-                        { text: question.option1, order: 1, isCorrect: question.correct === '1' },
-                        { text: question.option2, order: 2, isCorrect: question.correct === '2' },
-                        { text: question.option3, order: 3, isCorrect: question.correct === '3' },
-                        { text: question.option4, order: 4, isCorrect: question.correct === '4' }
-                    ];
+    const processQuestion = (question, index) => {
+        return new Promise((resolve, reject) => {
+            const questionType = question.answer ? 'short_answer' : 'multiple_choice';
+            const correctAnswer = question.answer || '';
+            const questionImage = question.image || null;
+            
+            // 문제 삽입
+            db.query(
+                'INSERT INTO question (quiz_id, question, question_type, correct_answer, created_by, question_img_url) VALUES (?, ?, ?, ?, ?, ?)',
+                [quizId, question.text, questionType, correctAnswer, userId, questionImage],
+                (err, result) => {
+                    if (err) {
+                        console.error('문제 삽입 오류:', err);
+                        reject(err);
+                        return;
+                    }
                     
-                    let completedOptions = 0;
-                    options.forEach(option => {
-                        db.query(
-                            'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)',
-                            [questionId, option.text, option.isCorrect ? 1 : 0, option.order],
-                            (err) => {
-                                if (err) {
-                                    console.error('선택지 삽입 오류:', err);
-                                    hasError = true;
-                                    return callback(false);
-                                }
-                                
-                                completedOptions++;
-                                if (completedOptions === 4) {
-                                    completedQuestions++;
-                                    if (completedQuestions === questionsArr.length) {
-                                        callback(true);
+                    const questionId = result.insertId;
+                    
+                    // 객관식인 경우 선택지 삽입
+                    if (questionType === 'multiple_choice') {
+                        const options = [
+                            { text: question.option1, order: 1, isCorrect: question.correct === '1' },
+                            { text: question.option2, order: 2, isCorrect: question.correct === '2' },
+                            { text: question.option3, order: 3, isCorrect: question.correct === '3' },
+                            { text: question.option4, order: 4, isCorrect: question.correct === '4' }
+                        ];
+                        
+                        const optionPromises = options.map(option => {
+                            return new Promise((resolveOption, rejectOption) => {
+                                db.query(
+                                    'INSERT INTO question_option (question_id, option_text, is_correct, option_order) VALUES (?, ?, ?, ?)',
+                                    [questionId, option.text, option.isCorrect ? 1 : 0, option.order],
+                                    (err) => {
+                                        if (err) {
+                                            console.error('선택지 삽입 오류:', err);
+                                            rejectOption(err);
+                                            return;
+                                        }
+                                        resolveOption();
                                     }
-                                }
-                            }
-                        );
-                    });
-                } else {
-                    // 주관식인 경우
-                    completedQuestions++;
-                    if (completedQuestions === questionsArr.length) {
-                        callback(true);
+                                );
+                            });
+                        });
+                        
+                        Promise.all(optionPromises)
+                            .then(() => resolve())
+                            .catch(err => reject(err));
+                    } else {
+                        // 주관식인 경우
+                        resolve();
                     }
                 }
+            );
+        });
+    };
+    
+    // 모든 문제를 순차적으로 처리
+    const processAllQuestions = async () => {
+        try {
+            for (let i = 0; i < questionsArr.length; i++) {
+                await processQuestion(questionsArr[i], i);
             }
-        );
-    });
+            callback(true);
+        } catch (err) {
+            console.error('문제 처리 중 오류 발생:', err);
+            callback(false);
+        }
+    };
+    
+    processAllQuestions();
 }
 
 // 내가 만든 퀴즈 목록 페이지
