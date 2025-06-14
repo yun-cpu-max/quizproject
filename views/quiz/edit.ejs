@@ -345,20 +345,45 @@
         </div>
     </div>
 
-    <!-- 확인 모달 -->
-    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+    <!-- 1차 확인 모달 -->
+    <div class="modal fade" id="confirmEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">퀴즈 수정 완료</h5>
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>퀴즈 수정 확인
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    수정된 퀴즈를 확인하시겠습니까?
+                    <p class="mb-0">퀴즈를 수정하시겠습니까?</p>
+                    <small class="text-muted">이 작업은 되돌릴 수 없습니다.</small>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">아니오</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmQuizEdit()">수정</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2차 완료 모달 -->
+    <div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle-fill me-2"></i>수정 완료
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">수정이 완료되었습니다.</p>
+                    <p class="mb-0">수정된 퀴즈를 확인하시겠습니까?</p>
+                </div>
+                <div class="modal-footer">
                     <button type="button" class="btn btn-primary" onclick="goToQuiz()">예</button>
+                    <button type="button" class="btn btn-secondary" onclick="goToOriginalPage()">아니오</button>
                 </div>
             </div>
         </div>
@@ -536,9 +561,16 @@
                 }
             }
 
-            if (!confirm('퀴즈를 수정하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-                return;
-            }
+            // 1차 확인 모달 표시
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmEditModal'));
+            confirmModal.show();
+        }
+
+        // 퀴즈 수정 확정 함수
+        function confirmQuizEdit() {
+            // 1차 모달 숨기기
+            const confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmEditModal'));
+            if (confirmModal) confirmModal.hide();
 
             // 폼 제출
             const form = document.getElementById('quizForm');
@@ -549,10 +581,10 @@
                 body: formData
             })
             .then(response => {
-                if (response.redirected) {
-                    // 수정 성공 시 모달 표시
-                    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-                    confirmModal.show();
+                if (response.ok || response.redirected) {
+                    // 2차 완료 모달 표시
+                    const completeModal = new bootstrap.Modal(document.getElementById('completeModal'));
+                    completeModal.show();
                 } else {
                     throw new Error('퀴즈 수정에 실패했습니다.');
                 }
@@ -565,6 +597,13 @@
         // 퀴즈로 이동 함수
         function goToQuiz() {
             window.location.href = '/quiz/list/<%= quiz.id %>?updated=1';
+        }
+
+        // 원래 페이지로 이동 함수 (현재 edit 페이지에 머물기)
+        function goToOriginalPage() {
+            // 모달만 닫고 현재 페이지에 머물기
+            const completeModal = bootstrap.Modal.getInstance(document.getElementById('completeModal'));
+            if (completeModal) completeModal.hide();
         }
 
         // 선택지 중복 체크 함수
