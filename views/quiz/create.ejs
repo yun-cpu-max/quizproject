@@ -162,367 +162,328 @@
     </style>
 </head>
 <body>
-    <!-- 네비게이션 바 -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" class="logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
-                    </li>
-                    <% if (user) { %>
-                        <li class="nav-item">
-                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
-                        </li>
+    <!-- 공통 네비게이션 바 -->
+    <%- include('../partials/navbar') %>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card quiz-card p-4">
+                    <% if (success) { %>
+                        <div class="alert alert-success text-center"><%= success %></div>
                     <% } %>
-                </ul>
-                <div class="d-flex">
-                    <% if (user) {
-                         if (user.role === 'admin') { %>
-                         <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
-                         <% }
-                         %> <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
-                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
-                    <% } else { %>
-                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
-                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
+                    <% if (error) { %>
+                        <div class="alert alert-danger text-center"><%= error %></div>
                     <% } %>
+                    <h2 class="quiz-title mb-4 text-center">퀴즈 생성</h2>
+                    <form id="quizForm" action="/quiz/create" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="created_by" value="<%= user.id %>">
+                        <div class="mb-3">
+                            <label class="form-label">퀴즈 썸네일</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="thumbnailType" id="defaultThumb" value="default" checked onchange="toggleThumbnailInput()">
+                                    <label class="form-check-label" for="defaultThumb">기본 썸네일 사용</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="thumbnailType" id="customThumb" value="custom" onchange="toggleThumbnailInput()">
+                                    <label class="form-check-label" for="customThumb">이미지 직접 업로드</label>
+                                </div>
+                            </div>
+                            <div id="thumbnailInput" style="display:none;" class="mt-2">
+                                <input type="file" class="form-control" name="thumbnailImage" accept="image/*">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">퀴즈 제목</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">퀴즈 설명</label>
+                            <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">카테고리</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">카테고리 선택</option>
+                                <option value="상식">상식</option>
+                                <option value="과학">과학</option>
+                                <option value="역사">역사</option>
+                                <option value="스포츠">스포츠</option>
+                                <option value="엔터테인먼트">엔터테인먼트</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">문제 유형</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="questionType" id="typeChoice" value="choice" checked>
+                                    <label class="form-check-label" for="typeChoice">객관식</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="questionType" id="typeSubjective" value="subjective">
+                                    <label class="form-check-label" for="typeSubjective">주관식</label>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <h5 class="mb-3">문제 만들기 (<span id="typeLabel">객관식 4지선다 최소10문제~최대30문제</span>)</h5>
+                        <div id="questionsContainer"></div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <button type="button" class="btn btn-outline-secondary" id="addQuestionBtn">문제 추가</button>
+                            <span id="questionCount" class="text-muted">0 / 30</span>
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">퀴즈 신청</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </nav>
-
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card quiz-card p-4">
-                <% if (success) { %>
-                    <div class="alert alert-success text-center"><%= success %></div>
-                <% } %>
-                <% if (error) { %>
-                    <div class="alert alert-danger text-center"><%= error %></div>
-                <% } %>
-                <h2 class="quiz-title mb-4 text-center">퀴즈 생성</h2>
-                <form id="quizForm" action="/quiz/create" method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="created_by" value="<%= user.id %>">
-                    <div class="mb-3">
-                        <label class="form-label">퀴즈 썸네일</label>
-                        <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="thumbnailType" id="defaultThumb" value="default" checked onchange="toggleThumbnailInput()">
-                                <label class="form-check-label" for="defaultThumb">기본 썸네일 사용</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="thumbnailType" id="customThumb" value="custom" onchange="toggleThumbnailInput()">
-                                <label class="form-check-label" for="customThumb">이미지 직접 업로드</label>
-                            </div>
-                        </div>
-                        <div id="thumbnailInput" style="display:none;" class="mt-2">
-                            <input type="file" class="form-control" name="thumbnailImage" accept="image/*">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="title" class="form-label">퀴즈 제목</label>
-                        <input type="text" class="form-control" id="title" name="title" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">퀴즈 설명</label>
-                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="category" class="form-label">카테고리</label>
-                        <select class="form-select" id="category" name="category" required>
-                            <option value="">카테고리 선택</option>
-                            <option value="상식">상식</option>
-                            <option value="과학">과학</option>
-                            <option value="역사">역사</option>
-                            <option value="스포츠">스포츠</option>
-                            <option value="엔터테인먼트">엔터테인먼트</option>
-                            <option value="기타">기타</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">문제 유형</label>
-                        <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="questionType" id="typeChoice" value="choice" checked>
-                                <label class="form-check-label" for="typeChoice">객관식</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="questionType" id="typeSubjective" value="subjective">
-                                <label class="form-check-label" for="typeSubjective">주관식</label>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <h5 class="mb-3">문제 만들기 (<span id="typeLabel">객관식 4지선다 최소10문제~최대30문제</span>)</h5>
-                    <div id="questionsContainer"></div>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button type="button" class="btn btn-outline-secondary" id="addQuestionBtn">문제 추가</button>
-                        <span id="questionCount" class="text-muted">0 / 30</span>
-                    </div>
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg">퀴즈 신청</button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
-</div>
 
-<script>
-    let questionCount = 0;
-    const maxQuestions = 30;
-    const minQuestions = 10;
-    let currentType = 'choice';
-    const questionsContainer = document.getElementById('questionsContainer');
-    const addQuestionBtn = document.getElementById('addQuestionBtn');
-    const questionCountSpan = document.getElementById('questionCount');
-    const quizForm = document.getElementById('quizForm');
-    const typeLabel = document.getElementById('typeLabel');
+    <script>
+        let questionCount = 0;
+        const maxQuestions = 30;
+        const minQuestions = 10;
+        let currentType = 'choice';
+        const questionsContainer = document.getElementById('questionsContainer');
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        const questionCountSpan = document.getElementById('questionCount');
+        const quizForm = document.getElementById('quizForm');
+        const typeLabel = document.getElementById('typeLabel');
 
-    function updateQuestionCount() {
-        questionCountSpan.textContent = `${questionCount} / ${maxQuestions}`;
-    }
-
-    function addQuestion() {
-        console.log('Add button clicked');
-        if (questionCount >= maxQuestions) {
-            alert('최대 30문제까지만 추가할 수 있습니다.');
-            return;
+        function updateQuestionCount() {
+            questionCountSpan.textContent = `${questionCount} / ${maxQuestions}`;
         }
-        const qIdx = questionCount;
-        questionCount++;
-        updateQuestionCount();
-        let questionHtml = '';
-        if (currentType === 'choice') {
-            questionHtml = 
-                '<div class="card mb-3" id="question-card-' + qIdx + '">' +
-                '    <div class="card-body">' +
-                '        <div class="d-flex justify-content-between align-items-center mb-2">' +
-                '            <h6 class="mb-0">문제 ' + (qIdx + 1) + '</h6>' +
-                '            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(' + qIdx + ')">삭제</button>' +
-                '        </div>' +
-                '        <div class="mb-3">' +
-                '            <label class="form-label">문제</label>' +
-                '            <input type="text" class="form-control" name="questions[' + qIdx + '][text]" required>' +
-                '        </div>' +
-                '        <div class="mb-3 question-options">' +
-                '            <label class="form-label">선택지</label>' +
-                '            <div class="row">' +
-                '                <div class="col-12 mb-2">' +
-                '                    <div class="input-group">' +
-                '                        <span class="input-group-text">' +
-                '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="1" required>' +
-                '                            <span class="ms-2">정답</span>' +
-                '                        </span>' +
-                '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option1]" placeholder="선택지 1" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
-                '                    </div>' +
-                '                </div>' +
-                '                <div class="col-12 mb-2">' +
-                '                    <div class="input-group">' +
-                '                        <span class="input-group-text">' +
-                '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="2" required>' +
-                '                            <span class="ms-2">정답</span>' +
-                '                        </span>' +
-                '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option2]" placeholder="선택지 2" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
-                '                    </div>' +
-                '                </div>' +
-                '                <div class="col-12 mb-2">' +
-                '                    <div class="input-group">' +
-                '                        <span class="input-group-text">' +
-                '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="3" required>' +
-                '                            <span class="ms-2">정답</span>' +
-                '                        </span>' +
-                '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option3]" placeholder="선택지 3" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
-                '                    </div>' +
-                '                </div>' +
-                '                <div class="col-12 mb-2">' +
-                '                    <div class="input-group">' +
-                '                        <span class="input-group-text">' +
-                '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="4" required>' +
-                '                            <span class="ms-2">정답</span>' +
-                '                        </span>' +
-                '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option4]" placeholder="선택지 4" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
-                '                    </div>' +
-                '                </div>' +
-                '            </div>' +
-                '        </div>' +
-                '        <div class="mb-3">' +
-                '            <label class="form-label">문제 이미지 (선택)</label>' +
-                '            <input type="file" class="form-control" name="questionImage' + qIdx + '" accept="image/*">' +
-                '        </div>' +
-                '    </div>' +
-                '</div>'
-            ;
-        } else {
-            questionHtml = 
-                '<div class="card mb-3" id="question-card-' + qIdx + '">' +
-                '    <div class="card-body">' +
-                '        <div class="d-flex justify-content-between align-items-center mb-2">' +
-                '            <h6 class="mb-0">문제 ' + (qIdx + 1) + '</h6>' +
-                '            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(' + qIdx + ')">삭제</button>' +
-                '        </div>' +
-                '        <div class="mb-3">' +
-                '            <label class="form-label">문제</label>' +
-                '            <input type="text" class="form-control" name="questions[' + qIdx + '][text]" required>' +
-                '        </div>' +
-                '        <div class="mb-3">' +
-                '            <label class="form-label">정답</label>' +
-                '            <input type="text" class="form-control" name="questions[' + qIdx + '][answer]" placeholder="정답 입력" required>' +
-                '        </div>' +
-                '        <div class="mb-3">' +
-                '            <label class="form-label">문제 이미지 (선택)</label>' +
-                '            <input type="file" class="form-control" name="questionImage' + qIdx + '" accept="image/*">' +
-                '        </div>' +
-                '    </div>' +
-                '</div>'
-            ;
-        }
-        questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
-    }
 
-    function removeQuestion(idx) {
-        const card = document.getElementById(`question-card-${idx}`);
-        if (card) {
-            card.remove();
-            questionCount--;
+        function addQuestion() {
+            console.log('Add button clicked');
+            if (questionCount >= maxQuestions) {
+                alert('최대 30문제까지만 추가할 수 있습니다.');
+                return;
+            }
+            const qIdx = questionCount;
+            questionCount++;
             updateQuestionCount();
-            // Renumber questions after removal
-            questionsContainer.querySelectorAll('.card').forEach((card, index) => {
-                const oldIdx = parseInt(card.id.replace('question-card-', ''));
-                const newIdx = index;
-                card.id = `question-card-${newIdx}`;
-                card.querySelector('h6').textContent = `문제 ${newIdx + 1}`;
-                // Update names and onclick for inputs and buttons
-                card.querySelectorAll('[name^="questions["]').forEach(input => {
-                    const oldName = input.name;
-                    const newName = oldName.replace(`questions[${oldIdx}]`, `questions[${newIdx}]`);
-                    input.name = newName;
-                });
-                const removeBtn = card.querySelector('button.btn-danger');
-                if (removeBtn) {
-                    removeBtn.onclick = () => removeQuestion(newIdx);
-                }
-            });
-        }
-    }
-
-    // Prevent form submission if question count is less than minQuestions
-    quizForm.addEventListener('submit', function(event) {
-        if (questionCount < minQuestions) {
-            alert(`최소 ${minQuestions} 문제 이상을 추가해야 합니다.`);
-            event.preventDefault();
-        }
-    });
-
-    // Handle question type change
-    document.querySelectorAll('input[name="questionType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            currentType = this.value;
-            questionsContainer.innerHTML = ''; // Clear existing questions
-            questionCount = 0;
-            updateQuestionCount();
-            typeLabel.textContent = currentType === 'choice' ? '객관식 4지선다 최소10문제~최대30문제' : '주관식 최소10문제~최대30문제';
-            // Optionally add a default question of the new type
-             addQuestion();
-        });
-    });
-
-    // Initial question add (add minQuestions on load)
-    document.addEventListener('DOMContentLoaded', function() {
-         // Add initial questions
-         for(let i = 0; i < minQuestions; i++) {
-             addQuestion();
-         }
-         updateQuestionCount(); // Update count after initial add
-
-         // Attach event listener after DOM is loaded
-         if (addQuestionBtn) {
-             addQuestionBtn.addEventListener('click', addQuestion);
-         }
-    });
-
-    // Function to toggle thumbnail input visibility
-    function toggleThumbnailInput() {
-        const thumbnailInputDiv = document.getElementById('thumbnailInput');
-        const customThumbRadio = document.getElementById('customThumb');
-        if (customThumbRadio.checked) {
-            thumbnailInputDiv.style.display = 'block';
-             thumbnailInputDiv.querySelector('input[name="thumbnailImage"]').setAttribute('required', 'required');
-        } else {
-            thumbnailInputDiv.style.display = 'none';
-             thumbnailInputDiv.querySelector('input[name="thumbnailImage"]').removeAttribute('required');
-        }
-    }
-
-    // Function to check for duplicate options (for multiple choice)
-    function checkDuplicateOptions(qIdx) {
-        if (currentType === 'choice') {
-            const options = [];
-            let hasDuplicates = false;
-            const questionCard = document.getElementById(`question-card-${qIdx}`);
-            if (!questionCard) return;
-
-            questionCard.querySelectorAll('input[name^="questions["][name$="][option1]"], input[name^="questions["][name$="][option2]"], input[name^="questions["][name$="][option3]"], input[name^="questions["][name$="][option4]"]').forEach(input => {
-                const value = input.value.trim();
-                if (value && options.includes(value)) {
-                    hasDuplicates = true;
-                }
-                if (value) {
-                    options.push(value);
-                }
-            });
-
-            const submitButton = quizForm.querySelector('button[type="submit"]');
-            if (hasDuplicates) {
-                 alert('선택지에 중복된 내용이 있습니다. 중복되지 않도록 수정해주세요.');
-                 submitButton.disabled = true;
+            let questionHtml = '';
+            if (currentType === 'choice') {
+                questionHtml = 
+                    '<div class="card mb-3" id="question-card-' + qIdx + '">' +
+                    '    <div class="card-body">' +
+                    '        <div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '            <h6 class="mb-0">문제 ' + (qIdx + 1) + '</h6>' +
+                    '            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(' + qIdx + ')">삭제</button>' +
+                    '        </div>' +
+                    '        <div class="mb-3">' +
+                    '            <label class="form-label">문제</label>' +
+                    '            <input type="text" class="form-control" name="questions[' + qIdx + '][text]" required>' +
+                    '        </div>' +
+                    '        <div class="mb-3 question-options">' +
+                    '            <label class="form-label">선택지</label>' +
+                    '            <div class="row">' +
+                    '                <div class="col-12 mb-2">' +
+                    '                    <div class="input-group">' +
+                    '                        <span class="input-group-text">' +
+                    '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="1" required>' +
+                    '                            <span class="ms-2">정답</span>' +
+                    '                        </span>' +
+                    '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option1]" placeholder="선택지 1" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
+                    '                    </div>' +
+                    '                </div>' +
+                    '                <div class="col-12 mb-2">' +
+                    '                    <div class="input-group">' +
+                    '                        <span class="input-group-text">' +
+                    '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="2" required>' +
+                    '                            <span class="ms-2">정답</span>' +
+                    '                        </span>' +
+                    '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option2]" placeholder="선택지 2" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
+                    '                    </div>' +
+                    '                </div>' +
+                    '                <div class="col-12 mb-2">' +
+                    '                    <div class="input-group">' +
+                    '                        <span class="input-group-text">' +
+                    '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="3" required>' +
+                    '                            <span class="ms-2">정답</span>' +
+                    '                        </span>' +
+                    '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option3]" placeholder="선택지 3" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
+                    '                    </div>' +
+                    '                </div>' +
+                    '                <div class="col-12 mb-2">' +
+                    '                    <div class="input-group">' +
+                    '                        <span class="input-group-text">' +
+                    '                            <input class="form-check-input mt-0" type="radio" name="questions[' + qIdx + '][correct]" value="4" required>' +
+                    '                            <span class="ms-2">정답</span>' +
+                    '                        </span>' +
+                    '                        <input type="text" class="form-control" name="questions[' + qIdx + '][option4]" placeholder="선택지 4" required onchange="checkDuplicateOptions(' + qIdx + ')">' +
+                    '                    </div>' +
+                    '                </div>' +
+                    '            </div>' +
+                    '        </div>' +
+                    '        <div class="mb-3">' +
+                    '            <label class="form-label">문제 이미지 (선택)</label>' +
+                    '            <input type="file" class="form-control" name="questionImage' + qIdx + '" accept="image/*">' +
+                    '        </div>' +
+                    '    </div>' +
+                    '</div>'
+                ;
             } else {
-                 // Re-check all options for all questions
-                 let overallDuplicates = false;
-                 questionsContainer.querySelectorAll('.card').forEach((card, index) => {
-                      const currentQIdx = parseInt(card.id.replace('question-card-', ''));
-                       if (checkQuestionForDuplicates(currentQIdx)){
-                            overallDuplicates = true;
-                       }
-                 });
-                 submitButton.disabled = overallDuplicates;
+                questionHtml = 
+                    '<div class="card mb-3" id="question-card-' + qIdx + '">' +
+                    '    <div class="card-body">' +
+                    '        <div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '            <h6 class="mb-0">문제 ' + (qIdx + 1) + '</h6>' +
+                    '            <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(' + qIdx + ')">삭제</button>' +
+                    '        </div>' +
+                    '        <div class="mb-3">' +
+                    '            <label class="form-label">문제</label>' +
+                    '            <input type="text" class="form-control" name="questions[' + qIdx + '][text]" required>' +
+                    '        </div>' +
+                    '        <div class="mb-3">' +
+                    '            <label class="form-label">정답</label>' +
+                    '            <input type="text" class="form-control" name="questions[' + qIdx + '][answer]" placeholder="정답 입력" required>' +
+                    '        </div>' +
+                    '        <div class="mb-3">' +
+                    '            <label class="form-label">문제 이미지 (선택)</label>' +
+                    '            <input type="file" class="form-control" name="questionImage' + qIdx + '" accept="image/*">' +
+                    '        </div>' +
+                    '    </div>' +
+                    '</div>'
+                ;
+            }
+            questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
+        }
+
+        function removeQuestion(idx) {
+            const card = document.getElementById(`question-card-${idx}`);
+            if (card) {
+                card.remove();
+                questionCount--;
+                updateQuestionCount();
+                // Renumber questions after removal
+                questionsContainer.querySelectorAll('.card').forEach((card, index) => {
+                    const oldIdx = parseInt(card.id.replace('question-card-', ''));
+                    const newIdx = index;
+                    card.id = `question-card-${newIdx}`;
+                    card.querySelector('h6').textContent = `문제 ${newIdx + 1}`;
+                    // Update names and onclick for inputs and buttons
+                    card.querySelectorAll('[name^="questions["]').forEach(input => {
+                        const oldName = input.name;
+                        const newName = oldName.replace(`questions[${oldIdx}]`, `questions[${newIdx}]`);
+                        input.name = newName;
+                    });
+                    const removeBtn = card.querySelector('button.btn-danger');
+                    if (removeBtn) {
+                        removeBtn.onclick = () => removeQuestion(newIdx);
+                    }
+                });
             }
         }
-    }
 
-    function checkQuestionForDuplicates(qIdx) {
-         const options = [];
-         const questionCard = document.getElementById(`question-card-${qIdx}`);
-         if (!questionCard) return false;
+        // Prevent form submission if question count is less than minQuestions
+        quizForm.addEventListener('submit', function(event) {
+            if (questionCount < minQuestions) {
+                alert(`최소 ${minQuestions} 문제 이상을 추가해야 합니다.`);
+                event.preventDefault();
+            }
+        });
 
-         let hasDuplicates = false;
-         questionCard.querySelectorAll('input[name^="questions["][name$="][option1]"], input[name^="questions["][name$="][option2]"], input[name^="questions["][name$="][option3]"], input[name^="questions["][name$="][option4]"]').forEach(input => {
-             const value = input.value.trim();
-             if (value && options.includes(value)) {
-                 hasDuplicates = true;
+        // Handle question type change
+        document.querySelectorAll('input[name="questionType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentType = this.value;
+                questionsContainer.innerHTML = ''; // Clear existing questions
+                questionCount = 0;
+                updateQuestionCount();
+                typeLabel.textContent = currentType === 'choice' ? '객관식 4지선다 최소10문제~최대30문제' : '주관식 최소10문제~최대30문제';
+                // Optionally add a default question of the new type
+                 addQuestion();
+            });
+        });
+
+        // Initial question add (add minQuestions on load)
+        document.addEventListener('DOMContentLoaded', function() {
+             // Add initial questions
+             for(let i = 0; i < minQuestions; i++) {
+                 addQuestion();
              }
-             if (value) {
-                 options.push(value);
-             }
-         });
-         return hasDuplicates;
-    }
+             updateQuestionCount(); // Update count after initial add
 
-</script>
+             // Attach event listener after DOM is loaded
+             if (addQuestionBtn) {
+                 addQuestionBtn.addEventListener('click', addQuestion);
+             }
+        });
+
+        // Function to toggle thumbnail input visibility
+        function toggleThumbnailInput() {
+            const thumbnailInputDiv = document.getElementById('thumbnailInput');
+            const customThumbRadio = document.getElementById('customThumb');
+            if (customThumbRadio.checked) {
+                thumbnailInputDiv.style.display = 'block';
+                 thumbnailInputDiv.querySelector('input[name="thumbnailImage"]').setAttribute('required', 'required');
+            } else {
+                thumbnailInputDiv.style.display = 'none';
+                 thumbnailInputDiv.querySelector('input[name="thumbnailImage"]').removeAttribute('required');
+            }
+        }
+
+        // Function to check for duplicate options (for multiple choice)
+        function checkDuplicateOptions(qIdx) {
+            if (currentType === 'choice') {
+                const options = [];
+                let hasDuplicates = false;
+                const questionCard = document.getElementById(`question-card-${qIdx}`);
+                if (!questionCard) return;
+
+                questionCard.querySelectorAll('input[name^="questions["][name$="][option1]"], input[name^="questions["][name$="][option2]"], input[name^="questions["][name$="][option3]"], input[name^="questions["][name$="][option4]"]').forEach(input => {
+                    const value = input.value.trim();
+                    if (value && options.includes(value)) {
+                        hasDuplicates = true;
+                    }
+                    if (value) {
+                        options.push(value);
+                    }
+                });
+
+                const submitButton = quizForm.querySelector('button[type="submit"]');
+                if (hasDuplicates) {
+                     alert('선택지에 중복된 내용이 있습니다. 중복되지 않도록 수정해주세요.');
+                     submitButton.disabled = true;
+                } else {
+                     // Re-check all options for all questions
+                     let overallDuplicates = false;
+                     questionsContainer.querySelectorAll('.card').forEach((card, index) => {
+                          const currentQIdx = parseInt(card.id.replace('question-card-', ''));
+                           if (checkQuestionForDuplicates(currentQIdx)){
+                                overallDuplicates = true;
+                           }
+                     });
+                     submitButton.disabled = overallDuplicates;
+                }
+            }
+        }
+
+        function checkQuestionForDuplicates(qIdx) {
+             const options = [];
+             const questionCard = document.getElementById(`question-card-${qIdx}`);
+             if (!questionCard) return false;
+
+             let hasDuplicates = false;
+             questionCard.querySelectorAll('input[name^="questions["][name$="][option1]"], input[name^="questions["][name$="][option2]"], input[name^="questions["][name$="][option3]"], input[name^="questions["][name$="][option4]"]').forEach(input => {
+                 const value = input.value.trim();
+                 if (value && options.includes(value)) {
+                     hasDuplicates = true;
+                 }
+                 if (value) {
+                     options.push(value);
+                 }
+             });
+             return hasDuplicates;
+        }
+
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

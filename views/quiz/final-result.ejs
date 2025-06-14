@@ -243,68 +243,32 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" class="logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
-                    </li>
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <li class="nav-item">
-                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
-                        </li>
-                    <% } %>
-                </ul>
-                <div class="d-flex">
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
-                        <% if (user.role === 'admin') { %>
-                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
-                        <% } %>
-                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
-                    <% } else { %>
-                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
-                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
-                    <% } %>
+    <!-- 공통 네비게이션 바 -->
+    <%- include('../partials/navbar') %>
+
+    <div class="container mt-5">
+        <div class="result-container">
+            
+            <div class="result-count">
+                <%= results.correctCount %> / <%= results.totalQuizzes %>개 정답<br>
+                정답률: <%= results.accuracy.toFixed(2) %>%
+            </div>
+
+            <div class="stats-container">
+                <div class="percentage-text">상위 <%= results.percentage ? results.percentage.toFixed(2) : 'N/A' %>%</div>
+                <div class="percentage-label">전체 사용자 중 당신의 위치</div>
+                
+                <div class="gauge-container">
+                    <div class="gauge-fill"></div>
+                    <div class="gauge-marker"></div>
                 </div>
             </div>
-        </div>
-    </nav>
 
-    <div class="result-container">
-        
-        <div class="result-count">
-            <%= results.correctCount %> / <%= results.totalQuizzes %>개 정답<br>
-            정답률: <%= results.accuracy.toFixed(2) %>%
-        </div>
-
-        <div class="stats-container">
-            <div class="percentage-text">상위 <%= results.percentage ? results.percentage.toFixed(2) : 'N/A' %>%</div>
-            <div class="percentage-label">전체 사용자 중 당신의 위치</div>
-            
-            <div class="gauge-container">
-                <div class="gauge-fill"></div>
-                <div class="gauge-marker"></div>
+            <div class="action-buttons">
+                <a href="/quiz/list/<%= quizId %>" class="action-button next-button">다시 풀기</a>
+                <a href="/quiz/dashboard/<%= quizId %>" class="action-button btn-info">대시보드 보기</a>
+                <a href="/" class="action-button home-button">홈으로</a>
             </div>
-        </div>
-
-        <div class="action-buttons">
-            <a href="/quiz/list/<%= quizId %>" class="action-button next-button">다시 풀기</a>
-            <a href="/quiz/dashboard/<%= quizId %>" class="action-button btn-info">대시보드 보기</a>
-            <a href="/" class="action-button home-button">홈으로</a>
         </div>
     </div>
 

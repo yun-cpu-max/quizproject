@@ -342,147 +342,149 @@
     <!-- 공통 네비게이션 바 -->
     <%- include('partials/navbar') %>
 
-    <div class="ranking-container">
-        <div class="container">
-            <!-- 랭킹 헤더 -->
-            <div class="ranking-header">
-                <h1><i class="bi bi-trophy me-3"></i>랭킹</h1>
-                <p>퀴즈 챔피언들을 만나보세요!</p>
-            </div>
-
-            <!-- 기간 선택 -->
-            <div class="period-selector">
-                <button class="period-btn active" data-period="all">
-                    <i class="bi bi-infinity me-2"></i>전체
-                </button>
-                <button class="period-btn" data-period="monthly">
-                    <i class="bi bi-calendar-month me-2"></i>월간
-                </button>
-                <button class="period-btn" data-period="weekly">
-                    <i class="bi bi-calendar-week me-2"></i>주간
-                </button>
-            </div>
-
-            <!-- 랭킹 탭 -->
-            <ul class="nav nav-tabs ranking-tabs" id="rankingTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="correct-answers-tab" data-bs-toggle="tab" data-bs-target="#correct-answers" type="button" role="tab">
-                        <i class="bi bi-check-circle me-2"></i>맞힌 문제 수
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="completed-quiz-tab" data-bs-toggle="tab" data-bs-target="#completed-quiz" type="button" role="tab">
-                        <i class="bi bi-list-check me-2"></i>완료한 퀴즈 수
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="popular-quiz-tab" data-bs-toggle="tab" data-bs-target="#popular-quiz" type="button" role="tab">
-                        <i class="bi bi-people me-2"></i>인기 퀴즈
-                    </button>
-                </li>
-            </ul>
-
-            <!-- 랭킹 내용 -->
-            <div class="tab-content" id="rankingTabsContent">
-                <!-- 맞힌 문제 수 랭킹 -->
-                <div class="tab-pane fade show active" id="correct-answers" role="tabpanel">
-                    <div class="ranking-card">
-                        <div class="ranking-card-header">
-                            <h3><i class="bi bi-check-circle me-2"></i>맞힌 문제 수 랭킹</h3>
-                        </div>
-                        <div class="ranking-list">
-                            <!-- 예시 데이터 - 실제로는 백엔드에서 전달받을 데이터 -->
-                            <% if (typeof correctAnswersRanking !== 'undefined' && correctAnswersRanking && correctAnswersRanking.length > 0) { %>
-                                <% correctAnswersRanking.forEach((user, index) => { %>
-                                    <div class="ranking-item">
-                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
-                                            <%= index + 1 %>
-                                        </div>
-                                        <div class="ranking-info">
-                                            <div class="ranking-name"><%= user.username %></div>
-                                            <div class="ranking-details">정답률: <%= user.accuracy !== undefined ? user.accuracy.toFixed(2) + '%' : 'N/A' %></div>
-                                        </div>
-                                        <div class="ranking-score">
-                                            <%= user.correctAnswers %>
-                                            <div class="ranking-score-label">문제</div>
-                                        </div>
-                                    </div>
-                                <% }) %>
-                            <% } else { %>
-                                <div class="empty-ranking">
-                                    <i class="bi bi-trophy"></i>
-                                    <h4>아직 랭킹 데이터가 없습니다</h4>
-                                    <p>퀴즈를 풀고 랭킹에 도전해보세요!</p>
-                                </div>
-                            <% } %>
-                        </div>
-                    </div>
+    <div class="container mt-5">
+        <div class="ranking-container">
+            <div class="container">
+                <!-- 랭킹 헤더 -->
+                <div class="ranking-header">
+                    <h1><i class="bi bi-trophy me-3"></i>랭킹</h1>
+                    <p>퀴즈 챔피언들을 만나보세요!</p>
                 </div>
 
-                <!-- 완료한 퀴즈 수 랭킹 -->
-                <div class="tab-pane fade" id="completed-quiz" role="tabpanel">
-                    <div class="ranking-card">
-                        <div class="ranking-card-header">
-                            <h3><i class="bi bi-list-check me-2"></i>완료한 퀴즈 수 랭킹</h3>
-                        </div>
-                        <div class="ranking-list">
-                            <% if (typeof completedQuizRanking !== 'undefined' && completedQuizRanking && completedQuizRanking.length > 0) { %>
-                                <% completedQuizRanking.forEach((user, index) => { %>
-                                    <div class="ranking-item">
-                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
-                                            <%= index + 1 %>
-                                        </div>
-                                        <div class="ranking-info">
-                                            <div class="ranking-name"><%= user.username %></div>
-                                            <div class="ranking-details">평균 점수: <%= user.averageScore !== undefined ? user.averageScore.toFixed(1) + '점' : 'N/A' %></div>
-                                        </div>
-                                        <div class="ranking-score">
-                                            <%= user.completedQuizzes %>
-                                            <div class="ranking-score-label">퀴즈</div>
-                                        </div>
-                                    </div>
-                                <% }) %>
-                            <% } else { %>
-                                <div class="empty-ranking">
-                                    <i class="bi bi-list-check"></i>
-                                    <h4>아직 랭킹 데이터가 없습니다</h4>
-                                    <p>퀴즈를 완료하고 랭킹에 도전해보세요!</p>
-                                </div>
-                            <% } %>
-                        </div>
-                    </div>
+                <!-- 기간 선택 -->
+                <div class="period-selector">
+                    <button class="period-btn active" data-period="all">
+                        <i class="bi bi-infinity me-2"></i>전체
+                    </button>
+                    <button class="period-btn" data-period="monthly">
+                        <i class="bi bi-calendar-month me-2"></i>월간
+                    </button>
+                    <button class="period-btn" data-period="weekly">
+                        <i class="bi bi-calendar-week me-2"></i>주간
+                    </button>
                 </div>
 
-                <!-- 인기 퀴즈 랭킹 -->
-                <div class="tab-pane fade" id="popular-quiz" role="tabpanel">
-                    <div class="ranking-card">
-                        <div class="ranking-card-header">
-                            <h3><i class="bi bi-people me-2"></i>인기 퀴즈 랭킹</h3>
-                        </div>
-                        <div class="ranking-list">
-                            <% if (typeof popularQuizRanking !== 'undefined' && popularQuizRanking && popularQuizRanking.length > 0) { %>
-                                <% popularQuizRanking.forEach((quiz, index) => { %>
-                                    <div class="ranking-item">
-                                        <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
-                                            <%= index + 1 %>
+                <!-- 랭킹 탭 -->
+                <ul class="nav nav-tabs ranking-tabs" id="rankingTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="correct-answers-tab" data-bs-toggle="tab" data-bs-target="#correct-answers" type="button" role="tab">
+                            <i class="bi bi-check-circle me-2"></i>맞힌 문제 수
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="completed-quiz-tab" data-bs-toggle="tab" data-bs-target="#completed-quiz" type="button" role="tab">
+                            <i class="bi bi-list-check me-2"></i>완료한 퀴즈 수
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="popular-quiz-tab" data-bs-toggle="tab" data-bs-target="#popular-quiz" type="button" role="tab">
+                            <i class="bi bi-people me-2"></i>인기 퀴즈
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- 랭킹 내용 -->
+                <div class="tab-content" id="rankingTabsContent">
+                    <!-- 맞힌 문제 수 랭킹 -->
+                    <div class="tab-pane fade show active" id="correct-answers" role="tabpanel">
+                        <div class="ranking-card">
+                            <div class="ranking-card-header">
+                                <h3><i class="bi bi-check-circle me-2"></i>맞힌 문제 수 랭킹</h3>
+                            </div>
+                            <div class="ranking-list">
+                                <!-- 예시 데이터 - 실제로는 백엔드에서 전달받을 데이터 -->
+                                <% if (typeof correctAnswersRanking !== 'undefined' && correctAnswersRanking && correctAnswersRanking.length > 0) { %>
+                                    <% correctAnswersRanking.forEach((user, index) => { %>
+                                        <div class="ranking-item">
+                                            <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                                <%= index + 1 %>
+                                            </div>
+                                            <div class="ranking-info">
+                                                <div class="ranking-name"><%= user.username %></div>
+                                                <div class="ranking-details">정답률: <%= user.accuracy !== undefined ? user.accuracy.toFixed(2) + '%' : 'N/A' %></div>
+                                            </div>
+                                            <div class="ranking-score">
+                                                <%= user.correctAnswers %>
+                                                <div class="ranking-score-label">문제</div>
+                                            </div>
                                         </div>
-                                        <div class="ranking-info">
-                                            <div class="ranking-name"><%= quiz.title %></div>
-                                            <div class="ranking-details">카테고리: <%= quiz.category %> | 평균 점수: <%= quiz.averageScore !== undefined ? quiz.averageScore.toFixed(1) + '점' : 'N/A' %></div>
-                                        </div>
-                                        <div class="ranking-score">
-                                            <%= quiz.participantCount %>
-                                            <div class="ranking-score-label">명 참여</div>
-                                        </div>
+                                    <% }) %>
+                                <% } else { %>
+                                    <div class="empty-ranking">
+                                        <i class="bi bi-trophy"></i>
+                                        <h4>아직 랭킹 데이터가 없습니다</h4>
+                                        <p>퀴즈를 풀고 랭킹에 도전해보세요!</p>
                                     </div>
-                                <% }) %>
-                            <% } else { %>
-                                <div class="empty-ranking">
-                                    <i class="bi bi-people"></i>
-                                    <h4>아직 랭킹 데이터가 없습니다</h4>
-                                    <p>퀴즈에 참여하고 인기 퀴즈를 만들어보세요!</p>
-                                </div>
-                            <% } %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 완료한 퀴즈 수 랭킹 -->
+                    <div class="tab-pane fade" id="completed-quiz" role="tabpanel">
+                        <div class="ranking-card">
+                            <div class="ranking-card-header">
+                                <h3><i class="bi bi-list-check me-2"></i>완료한 퀴즈 수 랭킹</h3>
+                            </div>
+                            <div class="ranking-list">
+                                <% if (typeof completedQuizRanking !== 'undefined' && completedQuizRanking && completedQuizRanking.length > 0) { %>
+                                    <% completedQuizRanking.forEach((user, index) => { %>
+                                        <div class="ranking-item">
+                                            <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                                <%= index + 1 %>
+                                            </div>
+                                            <div class="ranking-info">
+                                                <div class="ranking-name"><%= user.username %></div>
+                                                <div class="ranking-details">평균 점수: <%= user.averageScore !== undefined ? user.averageScore.toFixed(1) + '점' : 'N/A' %></div>
+                                            </div>
+                                            <div class="ranking-score">
+                                                <%= user.completedQuizzes %>
+                                                <div class="ranking-score-label">퀴즈</div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                <% } else { %>
+                                    <div class="empty-ranking">
+                                        <i class="bi bi-list-check"></i>
+                                        <h4>아직 랭킹 데이터가 없습니다</h4>
+                                        <p>퀴즈를 완료하고 랭킹에 도전해보세요!</p>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 인기 퀴즈 랭킹 -->
+                    <div class="tab-pane fade" id="popular-quiz" role="tabpanel">
+                        <div class="ranking-card">
+                            <div class="ranking-card-header">
+                                <h3><i class="bi bi-people me-2"></i>인기 퀴즈 랭킹</h3>
+                            </div>
+                            <div class="ranking-list">
+                                <% if (typeof popularQuizRanking !== 'undefined' && popularQuizRanking && popularQuizRanking.length > 0) { %>
+                                    <% popularQuizRanking.forEach((quiz, index) => { %>
+                                        <div class="ranking-item">
+                                            <div class="ranking-position <%= index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other' %>">
+                                                <%= index + 1 %>
+                                            </div>
+                                            <div class="ranking-info">
+                                                <div class="ranking-name"><%= quiz.title %></div>
+                                                <div class="ranking-details">카테고리: <%= quiz.category %> | 평균 점수: <%= quiz.averageScore !== undefined ? quiz.averageScore.toFixed(1) + '점' : 'N/A' %></div>
+                                            </div>
+                                            <div class="ranking-score">
+                                                <%= quiz.participantCount %>
+                                                <div class="ranking-score-label">명 참여</div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                <% } else { %>
+                                    <div class="empty-ranking">
+                                        <i class="bi bi-people"></i>
+                                        <h4>아직 랭킹 데이터가 없습니다</h4>
+                                        <p>퀴즈에 참여하고 인기 퀴즈를 만들어보세요!</p>
+                                    </div>
+                                <% } %>
+                            </div>
                         </div>
                     </div>
                 </div>
