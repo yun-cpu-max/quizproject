@@ -290,7 +290,7 @@
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <h6 class="mb-0">문제 <%= qIdx %></h6>
-                                                <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(<%= qIdx %>)">삭제</button>
+                                                <button type="button" class="btn btn-sm btn-danger" data-question-idx="<%= qIdx %>">삭제</button>
                                             </div>
                                             
                                             <div class="mb-3">
@@ -304,10 +304,10 @@
                                                     <% question.options.forEach((option, optIndex) => { %>
                                                         <div class="input-group">
                                                             <span class="input-group-text">
-                                                                <input class="form-check-input mt-0" type="radio" name="questions[<%= qIdx %>][correct]" value="<%= optIndex + 1 %>" <%= option.is_correct ? 'checked' : '' %> required>
+                                                                <input class="form-check-input mt-0" type="radio" name="questions[<%= qIdx %>][correct]" value="<%= optIndex + 1 %>" <%= option.is_correct ? 'checked' : '' %> required data-question-idx="<%= qIdx %>">
                                                                 <span class="ms-2">정답</span>
                                                             </span>
-                                                            <input type="text" class="form-control" name="questions[<%= qIdx %>][option<%= optIndex + 1 %>]" placeholder="선택지 <%= optIndex + 1 %>" value="<%= option.option_text %>" required onchange="checkDuplicateOptions(<%= qIdx %>)">
+                                                            <input type="text" class="form-control" name="questions[<%= qIdx %>][option<%= optIndex + 1 %>]" placeholder="선택지 <%= optIndex + 1 %>" value="<%= option.option_text %>" required data-question-idx="<%= qIdx %>">
                                                         </div>
                                                     <% }); %>
                                                 </div>
@@ -635,6 +635,22 @@
             const custom = document.getElementById('customThumb').checked;
             document.getElementById('thumbnailInput').style.display = custom ? 'block' : 'none';
         }
+
+        // 문제 삭제 버튼 이벤트 리스너 추가
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('button[data-question-idx]')) {
+                const idx = e.target.getAttribute('data-question-idx');
+                removeQuestion(parseInt(idx));
+            }
+        });
+
+        // 선택지 중복 체크 이벤트 리스너 추가
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('input[data-question-idx]')) {
+                const idx = e.target.getAttribute('data-question-idx');
+                checkDuplicateOptions(parseInt(idx));
+            }
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
