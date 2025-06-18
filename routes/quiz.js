@@ -88,7 +88,7 @@ router.post('/create', upload.any(), async (req, res) => {
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && thumbnailFile) {
-        // temp 폴더에서 실제 저장 폴더로 이동
+        // temp 폴더에서 thumbnails 폴더로 이동
         const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', thumbnailFile.filename);
         const newPath = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails', thumbnailFile.filename);
         
@@ -102,7 +102,7 @@ router.post('/create', upload.any(), async (req, res) => {
         thumbnailUrl = '/uploads/thumbnails/' + thumbnailFile.filename;
     }
 
-    // 문제 이미지 처리 (프론트에서 문제별 이미지 업로드 구현 필요)
+    // 문제 이미지 처리
     let questionsArr = Object.values(questions).filter(q => q);
     questionsArr = questionsArr.map((q, idx) => {
         const qimg = req.files.find(f => f.fieldname === `questionImage${idx}`);
@@ -130,11 +130,6 @@ router.post('/create', upload.any(), async (req, res) => {
 });
 
 // 퀴즈 플레이 페이지
-router.get('/play', (req, res) => {
-    // ID가 없는 경우 메인 페이지로 리다이렉트
-    res.redirect('/quiz');
-});
-
 router.get('/play/:id', async (req, res) => {
     try {
         const quizId = parseInt(req.params.id);
@@ -238,9 +233,6 @@ router.post('/submit', async (req, res) => {
         const quizId = req.session.quizId;
         const questionOrder = req.session.questionOrder;
         const user = req.session.user;
-
-        // 디버깅: 세션 상태 로그
-        console.log('[SUBMIT] resultSaved:', req.session.resultSaved, '| currentQuestion:', currentQuestionNum, '| totalQuestions:', req.session.totalQuestions);
 
         // DB에서 퀴즈 및 문제 불러오기
         const quiz = await Quiz.getById(quizId);
@@ -891,7 +883,7 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
     if (thumbnailType === 'default') {
         thumbnailUrl = '/rogo.png';
     } else if (thumbnailType === 'custom' && thumbnailFile) {
-        // temp 폴더에서 실제 저장 폴더로 이동
+        // temp 폴더에서 thumbnails 폴더로 이동
         const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', thumbnailFile.filename);
         const newPath = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails', thumbnailFile.filename);
         
@@ -919,7 +911,7 @@ router.post('/edit/:id', checkQuizOwnership, upload.any(), (req, res) => {
         questionsArr = questionsArr.map((q, idx) => {
             const qimg = req.files.find(f => f.fieldname === `questions[${idx + 1}][image]`);
             if (qimg) {
-                // temp 폴더에서 실제 저장 폴더로 이동
+                // temp 폴더에서 questions 폴더로 이동
                 const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'temp', qimg.filename);
                 const newPath = path.join(__dirname, '..', 'public', 'uploads', 'questions', qimg.filename);
                 
