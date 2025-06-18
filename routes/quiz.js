@@ -781,6 +781,11 @@ function checkQuizOwnership(req, res, next) {
         return res.redirect('/login');
     }
     
+    // 관리자가 아닌 경우 접근 제한
+    if (req.session.user.role !== 'admin') {
+        return res.status(403).send('퀴즈 수정은 관리자만 가능합니다.');
+    }
+    
     const quizId = req.params.id;
     const userId = req.session.user.id;
     

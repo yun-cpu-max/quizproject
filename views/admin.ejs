@@ -363,7 +363,7 @@
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr><th>ID</th><th>제목</th><th>카테고리</th><th>퀴즈정보</th></tr>
+                        <tr><th>ID</th><th>제목</th><th>카테고리</th><th>퀴즈정보</th><th>관리</th></tr>
                     </thead>
                     <tbody>
                         <% quizzes.forEach(quiz => {
@@ -377,6 +377,11 @@
                                 <td>
                                     <a href="#" class="view-quiz-link" data-bs-toggle="modal" data-bs-target="#quizModal" data-quiz-id="<%= quiz.id %>">
                                         문제보기
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="/quiz/edit/<%= quiz.id %>" class="quiz-title-link">
+                                        수정
                                     </a>
                                 </td>
                             </tr>

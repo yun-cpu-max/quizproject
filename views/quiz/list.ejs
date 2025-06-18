@@ -77,6 +77,46 @@
             text-decoration: none;
         }
 
+        .action-button {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+
+        .btn-outline-info {
+            border-color: #17a2b8;
+            color: #17a2b8;
+        }
+
+        .btn-outline-info:hover {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+            border-color: #d39e00;
+            color: #212529;
+        }
+
         .logo {
             height: 40px;
             width: auto;
@@ -131,6 +171,17 @@
                 <% if (questionCount > 0) { %>
                     <a href="/quiz/play/<%= quiz.id %>?count=<%= questionCount %>&reset=1" class="count-button">
                         <i class="fas fa-play"></i> <%= questionCount %>개 풀기
+                    </a>
+                <% } %>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center px-4 pb-4">
+                <a href="/quiz/dashboard/<%= quiz.id %>" class="btn btn-outline-info action-button">
+                    <i class="bi bi-graph-up"></i> 통계 보기
+                </a>
+                <% if (user && user.role === 'admin') { %>
+                    <a href="/quiz/edit/<%= quiz.id %>" class="btn btn-warning action-button">
+                        <i class="bi bi-pencil"></i> 수정
                     </a>
                 <% } %>
             </div>
