@@ -353,90 +353,54 @@
     </style>
 </head>
 <body>
-    <!-- Bootstrap 네비게이션 바 (메인 페이지와 동일) -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/home.png" alt="로고" class="logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> 홈</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/notice"><i class="bi bi-bell"></i> 공지사항</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/ranking"><i class="bi bi-trophy"></i> 랭킹</a>
-                    </li>
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <li class="nav-item">
-                            <span class="nav-link"><i class="bi bi-person"></i> <%= user.username %>님!</span>
-                        </li>
+    <!-- 공통 네비게이션 바 -->
+    <%- include('../partials/navbar') %>
+
+    <div class="container mt-5">
+        <div class="quiz-outer">
+            <div class="quiz-container">
+                <div class="quiz-header">
+                    <% if (category) { %>
+                        <span class="badge bg-primary" style="font-size:1.2rem;"> <%= category %> </span>
                     <% } %>
-                </ul>
-                <div class="d-flex">
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <a href="/myprofile" class="btn btn-outline-light me-2"><i class="bi bi-person-circle"></i> 내정보</a>
-                        <% if (user.role === 'admin') { %>
-                        <a href="/admin" class="btn btn-warning me-2"><i class="bi bi-gear"></i> 관리자</a>
-                        <% } %>
-                        <a href="/logout" class="btn btn-outline-light"><i class="bi bi-box-arrow-right"></i> 로그아웃</a>
-                    <% } else { %>
-                        <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
-                        <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <div class="quiz-outer">
-        <div class="quiz-container">
-            <div class="quiz-header">
-                <% if (category) { %>
-                    <span class="badge bg-primary" style="font-size:1.2rem;"> <%= category %> </span>
-                <% } %>
-                <%
-                let progressPercentage = 0;
-                const numCurrent = Number(currentQuestion);
-                const numTotal = Number(totalQuestions);
-                if (!isNaN(numCurrent) && !isNaN(numTotal) && numTotal > 0) {
-                    progressPercentage = Math.round((numCurrent / numTotal) * 100);
-                    progressPercentage = Math.max(0, Math.min(progressPercentage, 100));
-                }
-                const progressWidthClass = `progress-width-${Math.round(progressPercentage / 10) * 10}`;
-                %>
-                <div class="progress">
-                    <div class="progress-bar <%= progressWidthClass %>" role="progressbar">
-                        <%= currentQuestion %> / <%= totalQuestions %>
+                    <%
+                    let progressPercentage = 0;
+                    const numCurrent = Number(currentQuestion);
+                    const numTotal = Number(totalQuestions);
+                    if (!isNaN(numCurrent) && !isNaN(numTotal) && numTotal > 0) {
+                        progressPercentage = Math.round((numCurrent / numTotal) * 100);
+                        progressPercentage = Math.max(0, Math.min(progressPercentage, 100));
+                    }
+                    const progressWidthClass = `progress-width-${Math.round(progressPercentage / 10) * 10}`;
+                    %>
+                    <div class="progress">
+                        <div class="progress-bar <%= progressWidthClass %>" role="progressbar">
+                            <%= currentQuestion %> / <%= totalQuestions %>
+                        </div>
                     </div>
+                    <button class="next-button" id="next-button-top" disabled style="margin:0; padding:10px 28px; font-size:18px; background:#ccc; color:white; border:none; border-radius:7px; cursor:not-allowed;">다음 문제</button>
                 </div>
-                <button class="next-button" id="next-button-top" disabled style="margin:0; padding:10px 28px; font-size:18px; background:#ccc; color:white; border:none; border-radius:7px; cursor:not-allowed;">다음 문제</button>
-            </div>
 
-            <div class="question-area" style="margin-top: 20px; margin-bottom: 20px;">
-                <%= questionText %>
-            </div>
-
-            <div class="quiz-body-row">
-                <div class="quiz-media">
-                    <img src="<%= questionImage %>" alt="퀴즈 이미지" class="img-fluid">
+                <div class="question-area" style="margin-top: 20px; margin-bottom: 20px;">
+                    <%= questionText %>
                 </div>
-                <div class="quiz-main">
-                    <div class="options-area">
-                        <% if (options && options.length > 0) { %>
-                            <% options.forEach(function(option) { %>
-                                <button class="option-button" data-option-id="<%= option.id %>">
-                                    <%= option.option_text %>
-                                </button>
-                            <% }); %>
-                        <% } else { %>
-                            <div style="color: #333; margin-top: 20px;">선택지가 없습니다.</div>
-                        <% } %>
+
+                <div class="quiz-body-row">
+                    <div class="quiz-media">
+                        <img src="<%= questionImage %>" alt="퀴즈 이미지" class="img-fluid">
+                    </div>
+                    <div class="quiz-main">
+                        <div class="options-area">
+                            <% if (options && options.length > 0) { %>
+                                <% options.forEach(function(option) { %>
+                                    <button class="option-button" data-option-id="<%= option.id %>">
+                                        <%= option.option_text %>
+                                    </button>
+                                <% }); %>
+                            <% } else { %>
+                                <div style="color: #333; margin-top: 20px;">선택지가 없습니다.</div>
+                            <% } %>
+                        </div>
                     </div>
                 </div>
             </div>
