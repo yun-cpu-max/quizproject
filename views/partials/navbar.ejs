@@ -69,6 +69,11 @@
                     <a href="/login" class="btn btn-outline-light me-2"><i class="bi bi-box-arrow-in-right"></i> 로그인</a>
                     <a href="/signup" class="btn btn-light"><i class="bi bi-person-plus"></i> 회원가입</a>
                 <% } %>
+                <li class="nav-item">
+                    <button id="bgm-toggle-btn" class="btn btn-light ms-2" style="font-size:1.4rem;" title="배경음악 온/오프">
+                        <span id="bgm-icon">🎵</span>
+                    </button>
+                </li>
             </div>
             </div>
 </div>
@@ -143,6 +148,84 @@
         </div>
     </div>
 </div>
+
+<!-- 배경음악 오디오 및 온/오프 스크립트 (모든 페이지 공통) -->
+<audio id="bgm-audio" src="/music/Untitled.mp3" loop></audio>
+<script>
+  const bgmAudio = document.getElementById('bgm-audio');
+  const bgmBtn = document.getElementById('bgm-toggle-btn');
+  const bgmIcon = document.getElementById('bgm-icon');
+  let bgmOn = localStorage.getItem('bgmOn') === 'true';
+
+  // 이어듣기: currentTime 저장/복원
+  const BGM_SAVE_INTERVAL = 1000;
+  const BGM_TIME_KEY = 'bgmCurrentTime';
+
+  function restoreBgmTime() {
+    const saved = localStorage.getItem(BGM_TIME_KEY);
+    if (saved) {
+      try {
+        const t = parseFloat(saved);
+        if (!isNaN(t) && t > 0 && t < bgmAudio.duration) {
+          bgmAudio.currentTime = t;
+        }
+      } catch(e) {}
+    }
+  }
+
+  function saveBgmTime() {
+    if (!bgmAudio.paused) {
+      localStorage.setItem(BGM_TIME_KEY, bgmAudio.currentTime);
+    }
+  }
+
+  let bgmSaveIntervalId = null;
+  function startSavingBgmTime() {
+    if (bgmSaveIntervalId) clearInterval(bgmSaveIntervalId);
+    bgmSaveIntervalId = setInterval(saveBgmTime, BGM_SAVE_INTERVAL);
+  }
+  function stopSavingBgmTime() {
+    if (bgmSaveIntervalId) clearInterval(bgmSaveIntervalId);
+    bgmSaveIntervalId = null;
+  }
+
+  function updateBgmIcon() {
+    if (bgmOn && !bgmAudio.paused) {
+      bgmIcon.textContent = '🔊';
+    } else {
+      bgmIcon.textContent = '🔇';
+    }
+  }
+
+  function setBgmState(play) {
+    if (play) {
+      bgmAudio.volume = 0.5;
+      restoreBgmTime();
+      bgmAudio.play();
+      bgmOn = true;
+      startSavingBgmTime();
+    } else {
+      bgmAudio.pause();
+      bgmOn = false;
+      stopSavingBgmTime();
+    }
+    localStorage.setItem('bgmOn', bgmOn);
+    updateBgmIcon();
+  }
+
+  if (bgmBtn) {
+    bgmBtn.addEventListener('click', function() {
+      setBgmState(bgmAudio.paused);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (bgmOn) setBgmState(true);
+    else updateBgmIcon();
+  });
+
+  window.addEventListener('beforeunload', saveBgmTime);
+</script>
 
 <!-- 알림 기능을 위한 스크립트 -->
 <script>
